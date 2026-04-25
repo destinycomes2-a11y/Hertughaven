@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hertughaven</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0D1117; color: #E8E6E1; font-family: 'Crimson Pro', serif; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #30363D; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const SYSTEM_PROMPT = `Du er en avanceret AI-mentor, fagspecialist og sikkerhedsvejleder for Hertughaven – et kommunalt døgntilbud i socialpsykiatrien (Sønderborg Kommune). Din opgave er at træne og sparre med et tværfagligt team og ledelsen.
+
+NØGLEPERSONER:
+- Centerleder: Anders
+- Daglig leder: Jacob
+- AMR: Dennis og Laila
+- TR for FOA: Robert
+- TR for SL: Rikke L.
+
+FÆLLES FUNDAMENT (LA2 & SIKKERHEDSTAVLEN):
+- Sikkerhedstavlen er det centrale styringsredskab
+- Alle medarbejdere skal kende pædagogiske tiltag (Mestringsstrategier) fra tavlen
+- Faste risikovurderinger (BVC) afholdes i HVER vagt – må ikke springes over
+
+SIKKERHEDSREGLER (SKAL OVERHOLDES):
+1. MINDSTEMÅL-PRINCIPPET: Utryghed = gå altid 2 personaler eller træk dig
+2. BVC & SIKKERHEDSTAVLEN:
+   - 24-timers reglen: Rød/Gul kræver 24 timer uden score før nedjustering
+   - Rød Zone: ALTID 2 personaler. Ingen kørsel (kun nød)
+3. NORMERING: Min. 4 personaler i huset. Ved min. normering: Ingen udgang
+4. AKUT LEDELSE: Kontakt Jacob/Anders straks (døgnet rundt) ved: Politi, Skadestue/Læge, eller kollega forlader vagt pga. episode
+5. DOKUMENTATION: SafetyNet (VMP) via Insite og Cura
+
+PROFILER:
+- SSA/Sygeplejerske: Medicin (pro.medicin.dk niveau), somatik, observationer. Fagorg: Robert (TR)
+- Pædagog: KRAP, Metakognitiv terapi, relationel koordinering. Fagorg: Rikke L. (TR)
+- Socialfaglig: Lovgivning, handleplaner, §-status, koordinering
+- Leder: Personaleledelse, procedurer, bemanding. Personalemøde hver 3. uge, LMU hver 6. uge
+
+QUIZ-PROTOKOL (følg ALTID denne struktur):
+1. Feedback: Rigtigt eller forkert
+2. Uddybende forklaring: Hvorfor rigtigt/forkert
+3. Praksis-relevans: Hvorfor kritisk i dagligt arbejde
+4. Tilbud: Sværere spørgsmål (rigtigt) eller mere træning i samme emne (forkert)
+
+REGLER:
+- Tal ALDRIG ned til brugeren – antag ekspertise og brug korrekt terminologi
+- Opfind ALDRIG fakta – sig "Det ved jeg ikke med sikkerhed" og henvis til leder/kilde
+- Ved medicinændringer: Henvis til læge
+- Ved akut livsfare: Ring 112
+- Overhold GDPR – ingen borgeres navne
+- Basér svar på: pro.medicin.dk, sst.dk, retsinformation.dk og interne retningslinjer
+
+Den aktuelle brugers rolle er: {ROLE}
+
+Tilpas al vejledning til denne rolle. Brug en varm, professionel og direkte tone.`;
+
+const ROLES = [
+  { id: "SSA", label: "SSA", icon: "💊" },
+  { id: "Pædagog", label: "Pædagog", icon: "🧠" },
+  { id: "Sygeplejerske", label: "Sygeplejerske", icon: "🩺" },
+  { id: "Socialfaglig", label: "Socialfaglig", icon: "⚖️" },
+  { id: "Leder", label: "Leder", icon: "🏢" },
+];
+
+const QUICK_ACTIONS = {
+  SSA: ["Quiz om medicin", "BVC-scoring", "Somatiske observationer", "Dokumentation i Cura"],
+  Pædagog: ["Quiz om KRAP", "Metakognitiv terapi", "Sikkerhedstavlen", "Magtanvendelse §126"],
+  Sygeplejerske: ["Medicininteraktioner", "Sårpleje", "BVC & LA2", "Akut kontakt"],
+  Socialfaglig: ["Serviceloven §§", "Handleplaner", "Magtanvendelse", "VMP-indberetning"],
+  Leder: ["Normeringsregler", "Akut ledelsesansvar", "MED-aftalen", "Personalemøder"],
+};
+
+const ADMIN_PASSWORD = "hertughaven2024";
+
+const DEPOT_DRUGS = [
+  { id: "d1", name: "Abilify Maintena",  generic: "Aripiprazol" },
+  { id: "d2", name: "Risperdal Consta",  generic: "Risperidon" },
+  { id: "d3", name: "Xeplion",           generic: "Paliperidon palmitat" },
+  { id: "d4", name: "Zypadhera",         generic: "Olanzapin pamoat" },
+  { id: "d5", name: "Clopixol Depot",    generic: "Zuclopentixol" },
+  { id: "d6", name: "Fluanxol Depot",    generic: "Flupentixol" },
+  { id: "d7", name: "Haldol Decanoat",   generic: "Haloperidol" },
+  { id: "d8", name: "Invega Trinza",     generic: "Paliperidon palmitat 3M" },
+];
+
+const DEFAULT_STAFF = [
+  { id: "s1", name: "Maria Andersen",      role: "Sygeplejerske" },
+  { id: "s2", name: "Poul Sørensen",       role: "Sygeplejerske" },
+  { id: "s3", name: "Lena Christoffersen", role: "Sygeplejerske" },
+  { id: "s4", name: "Jonas Bech",          role: "Sosu-assistent" },
+  { id: "s5", name: "Anette Møller",       role: "Sygeplejerske" },
+];
+
+const DEFAULT_COMPETENCIES = {
+  s1: { d1:{approved:true,expiry:"2025-11-01"}, d2:{approved:true,expiry:"2026-03-15"}, d5:{approved:true,expiry:"2025-06-01"} },
+  s2: { d1:{approved:true,expiry:"2026-08-20"}, d4:{approved:true,expiry:"2026-01-10"}, d6:{approved:true,expiry:"2026-09-01"} },
+  s3: { d2:{approved:true,expiry:"2026-12-01"}, d3:{approved:true,expiry:"2026-05-01"}, d7:{approved:true,expiry:"2025-09-30"} },
+  s4: { d5:{approved:true,expiry:"2026-04-01"}, d6:{approved:true,expiry:"2026-04-01"} },
+  s5: { d1:{approved:true,expiry:"2027-01-01"}, d2:{approved:true,expiry:"2027-01-01"}, d8:{approved:true,expiry:"2026-11-01"} },
+};
+
+// ─── Storage ──────────────────────────────────────────────────────────────────
+
+const storage = {
+  get: (key, fallback = null) => {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+  },
+  set: (key, val) => {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  },
+};
+
+function trackEvent(type, data = {}) {
+  const events = storage.get("hh_events", []);
+  events.push({ type, data, ts: Date.now(), date: new Date().toISOString().split("T")[0] });
+  if (events.length > 2000) events.splice(0, events.length - 2000);
+  storage.set("hh_events", events);
+}
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+
+async function callClaude(messages, role) {
+  const systemPrompt = SYSTEM_PROMPT.replace("{ROLE}", role);
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages,
+    }),
+  });
+  const data = await response.json();
+  return data.content?.map(b => b.text || "").join("") || "Fejl: Intet svar modtaget.";
+}
+
+// ─── Depot helpers ────────────────────────────────────────────────────────────
+
+const todayDate = new Date();
+todayDate.setHours(0,0,0,0);
+
+function isExpired(dateStr) {
+  if (!dateStr) return false;
+  return new Date(dateStr) < todayDate;
+}
+
+function isSoonExpiring(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const diff = (d - todayDate) / (1000 * 60 * 60 * 24);
+  return diff >= 0 && diff <= 60;
+}
+
+function formatDate(d) {
+  if (!d) return "–";
+  return new Date(d).toLocaleDateString("da-DK", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function initials(name) {
+  return name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function competencyStatus(approved, expiry) {
+  if (!approved) return "none";
+  if (isExpired(expiry)) return "expired";
+  if (isSoonExpiring(expiry)) return "soon";
+  return "ok";
+}
+
+const STATUS_COLOR = { ok: "#2DD4A0", soon: "#F7884F", expired: "#F75454", none: "#3D5066" };
+const STATUS_LABEL = { ok: "Godkendt", soon: "Udløber snart", expired: "Udløbet", none: "Ikke godkendt" };
+
+function StatusBadge({ approved, expiry }) {
+  const st = competencyStatus(approved, expiry);
+  const c = STATUS_COLOR[st];
+  return (
+    <span style={{
+      fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600,
+      padding: "4px 10px", borderRadius: 4, letterSpacing: "0.05em",
+      background: c + "20", color: c, border: `1px solid ${c}40`, whiteSpace: "nowrap",
+    }}>{STATUS_LABEL[st]}</span>
+  );
+}
+
+// ─── Depot Edit Modal ─────────────────────────────────────────────────────────
+
+function DepotEditModal({ staffMember, competencies, onSave, onClose }) {
+  const [draft, setDraft] = useState(() => {
+    const c = competencies[staffMember.id] || {};
+    return DEPOT_DRUGS.reduce((acc, d) => {
+      acc[d.id] = { approved: c[d.id]?.approved || false, expiry: c[d.id]?.expiry || "" };
+      return acc;
+    }, {});
+  });
+
+  const toggle = (drugId) => setDraft(prev => ({ ...prev, [drugId]: { ...prev[drugId], approved: !prev[drugId].approved } }));
+  const setExpiry = (drugId, val) => setDraft(prev => ({ ...prev, [drugId]: { ...prev[drugId], expiry: val } }));
+
+  const save = () => {
+    const result = {};
+    DEPOT_DRUGS.forEach(d => {
+      if (draft[d.id].approved) result[d.id] = { approved: true, expiry: draft[d.id].expiry || null };
+    });
+    onSave(staffMember.id, result);
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:400, backdropFilter:"blur(6px)" }}>
+      <div style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:16, padding:28, width:"min(540px,94vw)", maxHeight:"85vh", overflowY:"auto" }}>
+        <div style={{ fontSize:18, fontWeight:600, color:"#E8E6E1", marginBottom:4 }}>Rediger kompetencer</div>
+        <div style={{ fontSize:13, color:"#4A6080", marginBottom:20, fontFamily:"'JetBrains Mono',monospace" }}>{staffMember.name} · {staffMember.role}</div>
+
+        {DEPOT_DRUGS.map(d => {
+          const entry = draft[d.id];
+          return (
+            <div key={d.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", borderRadius:8, marginBottom:8, background:"#161B22", border:`1px solid ${entry.approved?"#2D4A6E":"#1A2030"}` }}>
+              <input type="checkbox" checked={entry.approved} onChange={() => toggle(d.id)} style={{ accentColor:"#58A6FF", width:16, height:16, flexShrink:0, cursor:"pointer" }} />
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:15, color:"#C9D1D9", fontWeight:entry.approved?600:400 }}>{d.name}</div>
+                <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{d.generic}</div>
+              </div>
+              {entry.approved && (
+                <input type="date" value={entry.expiry} onChange={e => setExpiry(d.id, e.target.value)}
+                  style={{ background:"#080C10", border:"1px solid #2D4A6E", borderRadius:6, padding:"5px 9px", color:"#79C0FF", fontFamily:"'JetBrains Mono',monospace", fontSize:12, outline:"none" }} />
+              )}
+            </div>
+          );
+        })}
+
+        <div style={{ display:"flex", gap:10, marginTop:20, justifyContent:"flex-end" }}>
+          <button onClick={onClose} style={{ background:"none", border:"1px solid #1A2030", color:"#6E7681", borderRadius:8, padding:"9px 18px", cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:15 }}>Annuller</button>
+          <button onClick={save} style={{ background:"#1D3557", border:"1px solid #2D4A6E", color:"#79C0FF", borderRadius:8, padding:"9px 20px", cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:15, fontWeight:600 }}>Gem</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Depot Staff View ─────────────────────────────────────────────────────────
+
+function DepotStaffView({ staff, competencies, onEdit }) {
+  const [selected, setSelected] = useState(null);
+  const [query, setQuery] = useState("");
+
+  const filtered = staff.filter(s => s.name.toLowerCase().includes(query.toLowerCase()) || s.role.toLowerCase().includes(query.toLowerCase()));
+  const selectedMember = staff.find(s => s.id === selected);
+
+  const getStats = (staffId) => {
+    const comp = competencies[staffId] || {};
+    let ok = 0, expired = 0, soon = 0;
+    Object.values(comp).forEach(c => {
+      if (!c.approved) return;
+      const st = competencyStatus(c.approved, c.expiry);
+      if (st === "ok") ok++; else if (st === "expired") expired++; else if (st === "soon") soon++;
+    });
+    return { ok, expired, soon };
+  };
+
+  return (
+    <div style={{ display:"flex", height:"100%", minHeight:0 }}>
+      {/* List */}
+      <div style={{ width:240, flexShrink:0, borderRight:"1px solid #1A2030", overflowY:"auto", padding:"14px 10px" }}>
+        <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Søg medarbejder..."
+          style={{ width:"100%", background:"#080C10", border:"1px solid #1A2030", borderRadius:8, padding:"9px 12px", color:"#E8E6E1", fontFamily:"'Crimson Pro',serif", fontSize:14, outline:"none", marginBottom:10 }} />
+        {filtered.map(s => {
+          const { ok, expired, soon } = getStats(s.id);
+          const hasIssue = expired > 0 || soon > 0;
+          const isSel = selected === s.id;
+          return (
+            <div key={s.id} onClick={() => setSelected(isSel ? null : s.id)}
+              style={{ padding:"11px 12px", borderRadius:10, marginBottom:6, background:isSel?"#161B22":"#0D1520", border:`1px solid ${isSel?"#2D4A6E":"#1A2030"}`, cursor:"pointer" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+                <div style={{ width:32, height:32, borderRadius:"50%", background:"#080C10", border:`1.5px solid ${isSel?"#58A6FF":"#1A2030"}`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:600, color:"#58A6FF", flexShrink:0 }}>
+                  {initials(s.name)}
+                </div>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:"#C9D1D9", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.name}</div>
+                  <div style={{ fontSize:10, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{s.role}</div>
+                </div>
+              </div>
+              <div style={{ marginTop:7, fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:hasIssue?"#F7884F":"#2DD4A0" }}>
+                {ok} godkendt{ok!==1?"e":""}{hasIssue?` · ${expired+soon} problem${expired+soon!==1?"er":""}`:""}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Detail */}
+      <div style={{ flex:1, overflowY:"auto", padding:"22px 24px" }}>
+        {!selectedMember ? (
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:"#3D5066", fontStyle:"italic", fontSize:15, gap:10 }}>
+            <div style={{ fontSize:32, opacity:0.3 }}>💉</div>
+            Vælg en medarbejder for at se kompetencer
+          </div>
+        ) : (
+          <>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, paddingBottom:18, borderBottom:"1px solid #1A2030" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:44, height:44, borderRadius:"50%", background:"#080C10", border:"2px solid #58A6FF", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'JetBrains Mono',monospace", fontSize:15, fontWeight:600, color:"#58A6FF" }}>
+                  {initials(selectedMember.name)}
+                </div>
+                <div>
+                  <div style={{ fontSize:18, fontWeight:600, color:"#E8E6E1" }}>{selectedMember.name}</div>
+                  <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace", marginTop:2 }}>{selectedMember.role}</div>
+                </div>
+              </div>
+              <button onClick={() => onEdit(selectedMember)}
+                style={{ background:"none", border:"1px solid #1A2030", color:"#6E7681", borderRadius:8, padding:"7px 14px", cursor:"pointer", fontFamily:"'JetBrains Mono',monospace", fontSize:11 }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor="#58A6FF";e.currentTarget.style.color="#58A6FF"}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="#1A2030";e.currentTarget.style.color="#6E7681"}}>
+                Rediger
+              </button>
+            </div>
+
+            <div style={{ fontSize:10, fontFamily:"'JetBrains Mono',monospace", color:"#3D5066", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:12 }}>Godkendte præparater</div>
+
+            {DEPOT_DRUGS.map(d => {
+              const c = (competencies[selectedMember.id] || {})[d.id];
+              if (!c?.approved) return null;
+              return (
+                <div key={d.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", borderRadius:10, marginBottom:7, background:"#0D1520", border:"1px solid #1A2030" }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:14, fontWeight:600, color:"#C9D1D9" }}>{d.name}</div>
+                    <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{d.generic}</div>
+                  </div>
+                  {c.expiry && <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{formatDate(c.expiry)}</div>}
+                  <StatusBadge approved={c.approved} expiry={c.expiry} />
+                </div>
+              );
+            })}
+
+            {Object.values(competencies[selectedMember.id] || {}).filter(c => c.approved).length === 0 && (
+              <div style={{ color:"#3D5066", fontStyle:"italic", fontSize:14 }}>Ingen registrerede kompetencer</div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Depot Drug View ──────────────────────────────────────────────────────────
+
+function DepotDrugView({ staff, competencies }) {
+  const [selected, setSelected] = useState(null);
+  const [query, setQuery] = useState("");
+
+  const filtered = DEPOT_DRUGS.filter(d => d.name.toLowerCase().includes(query.toLowerCase()) || d.generic.toLowerCase().includes(query.toLowerCase()));
+  const selectedDrug = DEPOT_DRUGS.find(d => d.id === selected);
+
+  const getCount = (drugId) => staff.filter(s => {
+    const c = (competencies[s.id] || {})[drugId];
+    return c?.approved && !isExpired(c.expiry);
+  }).length;
+
+  return (
+    <div style={{ display:"flex", height:"100%", minHeight:0 }}>
+      <div style={{ width:240, flexShrink:0, borderRight:"1px solid #1A2030", overflowY:"auto", padding:"14px 10px" }}>
+        <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Søg præparat..."
+          style={{ width:"100%", background:"#080C10", border:"1px solid #1A2030", borderRadius:8, padding:"9px 12px", color:"#E8E6E1", fontFamily:"'Crimson Pro',serif", fontSize:14, outline:"none", marginBottom:10 }} />
+        {filtered.map(d => {
+          const count = getCount(d.id);
+          const isSel = selected === d.id;
+          return (
+            <div key={d.id} onClick={() => setSelected(isSel ? null : d.id)}
+              style={{ padding:"11px 12px", borderRadius:10, marginBottom:6, background:isSel?"#161B22":"#0D1520", border:`1px solid ${isSel?"#2D4A6E":"#1A2030"}`, cursor:"pointer" }}>
+              <div style={{ fontSize:13, fontWeight:600, color:"#C9D1D9" }}>{d.name}</div>
+              <div style={{ fontSize:10, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace", marginTop:2 }}>{d.generic}</div>
+              <div style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:count>0?"#2DD4A0":"#F75454", marginTop:7 }}>{count} godkendt{count!==1?"e":""} medarb.</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ flex:1, overflowY:"auto", padding:"22px 24px" }}>
+        {!selectedDrug ? (
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:"#3D5066", fontStyle:"italic", fontSize:15, gap:10 }}>
+            <div style={{ fontSize:32, opacity:0.3 }}>💊</div>
+            Vælg et præparat for at se godkendte medarbejdere
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom:20, paddingBottom:18, borderBottom:"1px solid #1A2030" }}>
+              <div style={{ fontSize:18, fontWeight:600, color:"#E8E6E1" }}>{selectedDrug.name}</div>
+              <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace", marginTop:3 }}>{selectedDrug.generic}</div>
+            </div>
+            <div style={{ fontSize:10, fontFamily:"'JetBrains Mono',monospace", color:"#3D5066", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:12 }}>Medarbejdere med kompetence</div>
+
+            {staff.map(s => {
+              const c = (competencies[s.id] || {})[selectedDrug.id];
+              if (!c?.approved) return null;
+              const st = competencyStatus(c.approved, c.expiry);
+              return { s, c, st };
+            }).filter(Boolean)
+              .sort((a,b) => ({ok:0,soon:1,expired:2}[a.st] - {ok:0,soon:1,expired:2}[b.st]))
+              .map(({s,c,st}) => (
+                <div key={s.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", borderRadius:10, marginBottom:7, background:"#0D1520", border:"1px solid #1A2030" }}>
+                  <div style={{ width:34, height:34, borderRadius:"50%", background:"#080C10", border:"1.5px solid #1A2030", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:600, color:"#58A6FF", flexShrink:0 }}>
+                    {initials(s.name)}
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:14, fontWeight:600, color:"#C9D1D9" }}>{s.name}</div>
+                    <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{s.role}</div>
+                  </div>
+                  {c.expiry && <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{formatDate(c.expiry)}</div>}
+                  <StatusBadge approved={c.approved} expiry={c.expiry} />
+                </div>
+              ))
+            }
+            {staff.filter(s => (competencies[s.id]||{})[selectedDrug.id]?.approved).length === 0 && (
+              <div style={{ color:"#3D5066", fontStyle:"italic", fontSize:14 }}>Ingen godkendte medarbejdere</div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Depot Module ─────────────────────────────────────────────────────────────
+
+function DepotModule({ onClose }) {
+  const [activeTab, setActiveTab] = useState("staff");
+  const [staff, setStaff] = useState(() => storage.get("hh_depot_staff", DEFAULT_STAFF));
+  const [competencies, setCompetencies] = useState(() => storage.get("hh_depot_comp", DEFAULT_COMPETENCIES));
+  const [editTarget, setEditTarget] = useState(null);
+
+  useEffect(() => { storage.set("hh_depot_staff", staff); }, [staff]);
+  useEffect(() => { storage.set("hh_depot_comp", competencies); }, [competencies]);
+
+  const saveCompetencies = (staffId, newComp) => {
+    setCompetencies(prev => ({ ...prev, [staffId]: newComp }));
+    setEditTarget(null);
+  };
+
+  const totalOk = staff.reduce((acc, s) => acc + Object.values(competencies[s.id]||{}).filter(c => c.approved && !isExpired(c.expiry)).length, 0);
+  const totalExpired = staff.reduce((acc, s) => acc + Object.values(competencies[s.id]||{}).filter(c => c.approved && isExpired(c.expiry)).length, 0);
+  const totalSoon = staff.reduce((acc, s) => acc + Object.values(competencies[s.id]||{}).filter(c => c.approved && isSoonExpiring(c.expiry)).length, 0);
+
+  const tabBtn = (id, label) => (
+    <button onClick={() => setActiveTab(id)} style={{
+      background: activeTab===id?"#1D3557":"none",
+      border: `1px solid ${activeTab===id?"#2D4A6E":"#1A2030"}`,
+      color: activeTab===id?"#79C0FF":"#6E7681",
+      borderRadius:8, padding:"7px 16px", cursor:"pointer",
+      fontFamily:"'JetBrains Mono',monospace", fontSize:12, letterSpacing:"0.05em",
+    }}>{label}</button>
+  );
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"#080C10", zIndex:300, display:"flex", flexDirection:"column", fontFamily:"'Crimson Pro',serif" }}>
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px", borderBottom:"1px solid #1A2030", background:"#080C10", flexShrink:0, flexWrap:"wrap" }}>
+        <button onClick={onClose} style={{ background:"#0D1520", border:"1px solid #2D4A6E", color:"#79C0FF", borderRadius:8, padding:"8px 14px", cursor:"pointer", fontSize:14, fontFamily:"'Crimson Pro',serif", fontWeight:600, flexShrink:0 }}
+          onMouseEnter={e=>e.currentTarget.style.background="#1D3557"}
+          onMouseLeave={e=>e.currentTarget.style.background="#0D1520"}>
+          ← Tilbage
+        </button>
+        <div style={{ display:"flex", alignItems:"center", gap:8, flex:1, minWidth:0 }}>
+          <span style={{ fontSize:18 }}>💉</span>
+          <div>
+            <div style={{ fontSize:16, fontWeight:600, color:"#E8E6E1" }}>Depot Kompetencer</div>
+            <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#3D5066", textTransform:"uppercase", letterSpacing:"0.08em" }}>Hertughaven</div>
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+          <span style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", padding:"4px 10px", borderRadius:20, background:"#2DD4A020", border:"1px solid #2DD4A040", color:"#2DD4A0" }}>{totalOk} ok</span>
+          {totalSoon > 0 && <span style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", padding:"4px 10px", borderRadius:20, background:"#F7884F20", border:"1px solid #F7884F40", color:"#F7884F" }}>⚠ {totalSoon}</span>}
+          {totalExpired > 0 && <span style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", padding:"4px 10px", borderRadius:20, background:"#F7545420", border:"1px solid #F7545440", color:"#F75454" }}>✕ {totalExpired}</span>}
+        </div>
+        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+          {tabBtn("staff","Medarbejder")}
+          {tabBtn("drug","Præparat")}
+        </div>
+      </div>
+
+      <div style={{ flex:1, minHeight:0 }}>
+        {activeTab==="staff"
+          ? <DepotStaffView staff={staff} competencies={competencies} onEdit={setEditTarget} />
+          : <DepotDrugView staff={staff} competencies={competencies} />
+        }
+      </div>
+
+      {editTarget && <DepotEditModal staffMember={editTarget} competencies={competencies} onSave={saveCompetencies} onClose={() => setEditTarget(null)} />}
+    </div>
+  );
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+function Dashboard({ onClose }) {
+  const events = storage.get("hh_events", []);
+  const sessions = events.filter(e => e.type==="session_start");
+  const messages = events.filter(e => e.type==="message_sent");
+  const topics = events.filter(e => e.type==="topic");
+
+  const roleCount = {};
+  ROLES.forEach(r => roleCount[r.id] = 0);
+  sessions.forEach(e => { if (e.data.role) roleCount[e.data.role] = (roleCount[e.data.role]||0)+1; });
+
+  const now = new Date();
+  const days = Array.from({length:14},(_,i) => { const d=new Date(now); d.setDate(d.getDate()-(13-i)); return d.toISOString().split("T")[0]; });
+  const msgPerDay = days.map(d => ({ date:d, label:new Date(d).toLocaleDateString("da-DK",{weekday:"short",day:"numeric"}), count:messages.filter(e=>e.date===d).length }));
+
+  const topicCount = {};
+  topics.forEach(e => { if (e.data.topic) topicCount[e.data.topic]=(topicCount[e.data.topic]||0)+1; });
+  const topTopics = Object.entries(topicCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  const totalSessions = sessions.length;
+  const totalMessages = messages.length;
+  const avgMsg = totalSessions ? (totalMessages/totalSessions).toFixed(1) : 0;
+  const activeDays = days.slice(7).filter(d => messages.some(e=>e.date===d)).length;
+  const maxDay = Math.max(...msgPerDay.map(d=>d.count),1);
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"#080C10", zIndex:300, overflowY:"auto", fontFamily:"'Crimson Pro',serif" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", borderBottom:"1px solid #1A2030", background:"#080C10", position:"sticky", top:0, zIndex:10 }}>
+        <div>
+          <div style={{ fontSize:20, fontWeight:600, color:"#E8E6E1" }}>⚕️ Hertughaven · Admin Dashboard</div>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#3D5066", textTransform:"uppercase", letterSpacing:"0.1em", marginTop:2 }}>Sønderborg Kommune · Socialpsykiatri</div>
+        </div>
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={() => {
+            const blob = new Blob([JSON.stringify({exportDate:new Date().toISOString(),totalSessions,totalMessages,roleCount,topTopics},null,2)],{type:"application/json"});
+            const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`hertughaven-rapport-${new Date().toISOString().split("T")[0]}.json`; a.click();
+          }} style={{ background:"#1D3557", border:"1px solid #2D4A6E", color:"#79C0FF", borderRadius:8, padding:"8px 16px", cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:14 }}>↓ Eksportér</button>
+          <button onClick={onClose} style={{ background:"#0D1520", border:"1px solid #1A2030", color:"#8B949E", borderRadius:8, padding:"8px 16px", cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:14 }}>← Tilbage</button>
+        </div>
+      </div>
+
+      <div style={{ padding:28, maxWidth:1000, margin:"0 auto" }}>
+        {totalSessions===0 ? (
+          <div style={{ textAlign:"center", padding:"60px 20px", color:"#3D5066", fontStyle:"italic" }}>Ingen data endnu. Data indsamles automatisk når medarbejdere bruger appen.</div>
+        ) : (
+          <>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:14, marginBottom:28 }}>
+              {[{label:"Samtaler i alt",value:totalSessions,hint:"siden opstart"},{label:"Beskeder sendt",value:totalMessages,hint:"bruger + AI"},{label:"Pr. samtale",value:avgMsg,hint:"gennemsnit"},{label:"Aktive dage (7 dg)",value:`${activeDays}/7`,hint:"dage med aktivitet"}].map(s => (
+                <div key={s.label} style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:12, padding:"18px 20px" }}>
+                  <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#3D5066", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8 }}>{s.label}</div>
+                  <div style={{ fontSize:32, fontWeight:600, color:"#79C0FF", lineHeight:1 }}>{s.value}</div>
+                  <div style={{ fontSize:13, color:"#4A6080", marginTop:4, fontStyle:"italic" }}>{s.hint}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginBottom:28 }}>
+              <div style={{ fontSize:16, fontWeight:600, color:"#8B949E", marginBottom:14, paddingBottom:8, borderBottom:"1px solid #1A2030" }}>Aktivitet · Seneste 14 dage</div>
+              <div style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:12, padding:"20px 16px" }}>
+                <div style={{ display:"flex", alignItems:"flex-end", gap:5, height:100 }}>
+                  {msgPerDay.map(d => (
+                    <div key={d.date} style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1, height:"100%", justifyContent:"flex-end" }}>
+                      {d.count>0 && <div style={{ fontSize:10, color:"#79C0FF", marginBottom:3, fontFamily:"'JetBrains Mono',monospace" }}>{d.count}</div>}
+                      <div style={{ width:"100%", borderRadius:"3px 3px 0 0", background:"linear-gradient(180deg,#3B82F6,#1D4ED8)", minHeight:2, height:`${(d.count/maxDay)*90}%` }} />
+                      <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"#3D5066", marginTop:5, writingMode:"vertical-rl", transform:"rotate(180deg)", whiteSpace:"nowrap" }}>{d.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:24 }}>
+              <div>
+                <div style={{ fontSize:16, fontWeight:600, color:"#8B949E", marginBottom:14, paddingBottom:8, borderBottom:"1px solid #1A2030" }}>Faggrupper</div>
+                <div style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:12, padding:"14px 18px" }}>
+                  {ROLES.map(r => {
+                    const count = roleCount[r.id]||0;
+                    const max = Math.max(...Object.values(roleCount),1);
+                    return (
+                      <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid #1A2030" }}>
+                        <span style={{ fontSize:14 }}>{r.icon}</span>
+                        <span style={{ fontSize:14, color:"#C9D1D9", width:100 }}>{r.id}</span>
+                        <div style={{ flex:1, height:5, background:"#1A2030", borderRadius:3, overflow:"hidden" }}>
+                          <div style={{ height:"100%", width:`${(count/max)*100}%`, background:"linear-gradient(90deg,#2D6A4F,#58A6FF)", borderRadius:3 }} />
+                        </div>
+                        <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:13, color:"#58A6FF", width:20, textAlign:"right" }}>{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize:16, fontWeight:600, color:"#8B949E", marginBottom:14, paddingBottom:8, borderBottom:"1px solid #1A2030" }}>Mest efterspurgte emner</div>
+                {topTopics.length===0 ? <div style={{ color:"#3D5066", fontStyle:"italic" }}>Emnedata indsamles fra genvejsknapper</div>
+                  : topTopics.map(([topic,count]) => (
+                    <div key={topic} style={{ display:"flex", justifyContent:"space-between", padding:"8px 12px", borderRadius:8, marginBottom:6, background:"#0D1520", border:"1px solid #1A2030" }}>
+                      <span style={{ fontSize:14, color:"#C9D1D9" }}>{topic}</span>
+                      <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:12, background:"#1A2030", color:"#58A6FF", padding:"2px 8px", borderRadius:10 }}>{count}×</span>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+
+            <div style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:12, padding:"14px 18px", fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:"#3D5066", lineHeight:1.7 }}>
+              <span style={{ color:"#4A6080" }}>ℹ️ GDPR-note:</span> Data gemmes lokalt i browseren. Ingen persondata eller samtaleindhold registreres.
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Admin Login ──────────────────────────────────────────────────────────────
+
+function AdminLogin({ onSuccess, onCancel }) {
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState(false);
+  const attempt = () => { if (pw===ADMIN_PASSWORD) onSuccess(); else { setErr(true); setPw(""); } };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:250, backdropFilter:"blur(6px)" }}>
+      <div style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:16, padding:36, width:320 }}>
+        <div style={{ fontSize:26, textAlign:"center", marginBottom:8 }}>🔒</div>
+        <div style={{ fontSize:19, fontWeight:600, color:"#E8E6E1", textAlign:"center", marginBottom:4 }}>Admin adgang</div>
+        <div style={{ fontSize:14, color:"#6E7681", textAlign:"center", marginBottom:22, fontStyle:"italic" }}>Kun for daglig leder</div>
+        <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&attempt()} placeholder="Adgangskode..." autoFocus
+          style={{ width:"100%", background:"#080C10", border:`1px solid ${err?"#F85149":"#1A2030"}`, borderRadius:8, padding:"10px 14px", color:"#E8E6E1", fontFamily:"'Crimson Pro',serif", fontSize:16, outline:"none", marginBottom:err?8:14 }} />
+        {err && <div style={{ color:"#F85149", fontSize:13, marginBottom:10, textAlign:"center" }}>Forkert adgangskode</div>}
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={onCancel} style={{ flex:1, background:"none", border:"1px solid #1A2030", color:"#6E7681", borderRadius:8, padding:10, cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:15 }}>Annuller</button>
+          <button onClick={attempt} style={{ flex:1, background:"#1D3557", border:"1px solid #2D4A6E", color:"#79C0FF", borderRadius:8, padding:10, cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:15 }}>Log ind</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+
+function App() {
+  const [role, setRole] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [showDepot, setShowDepot] = useState(false);
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const r = storage.get("hh_role");
+    const m = storage.get("hh_messages");
+    if (r) setRole(r);
+    if (m) setMessages(m);
+  }, []);
+
+  useEffect(() => {
+    if (role) { storage.set("hh_role", role); storage.set("hh_messages", messages); }
+  }, [role, messages]);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({behavior:"smooth"}); }, [messages, loading]);
+
+  const selectRole = (r) => {
+    setRole(r); setShowRoleModal(false);
+    trackEvent("session_start", {role:r});
+    setMessages([{ role:"assistant", content:`Velkommen, ${r}! 👋\n\nJeg er din faglige sparringspartner på **Hertughaven**. Jeg kender jeres arbejdsmetoder, sikkerhedsprocedurer, lovgivning og faglige udfordringer.\n\nDu kan:\n- 💬 **Sparre** om en konkret situation\n- 🧪 **Træne** med quiz og cases\n- 📋 **Få råd** om procedurer og lovgivning\n- 🔒 **Genopfriske** sikkerhedsregler (BVC, LA2, Sikkerhedstavlen)\n\nHvad kan jeg hjælpe dig med i dag?` }]);
+  };
+
+  const sendMessage = async (text) => {
+    const userText = text || input.trim();
+    if (!userText || loading) return;
+    setInput("");
+    trackEvent("message_sent", {role});
+    const newMsgs = [...messages, {role:"user", content:userText}];
+    setMessages(newMsgs);
+    setLoading(true);
+    try {
+      const reply = await callClaude(newMsgs.map(m=>({role:m.role,content:m.content})), role);
+      setMessages([...newMsgs, {role:"assistant", content:reply}]);
+    } catch {
+      setMessages([...newMsgs, {role:"assistant", content:"⚠️ Fejl ved forbindelse. Prøv igen."}]);
+    }
+    setLoading(false);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const handleQuick = (a) => { trackEvent("topic",{topic:a,role}); sendMessage(a); };
+  const clearHistory = () => { setMessages([]); storage.set("hh_messages",[]); if(role) selectRole(role); };
+
+  const fmt = (text) => text
+    .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g,"<em>$1</em>")
+    .replace(/`(.+?)`/g,"<code>$1</code>")
+    .replace(/#{1,3} (.+)/g,'<span style="display:block;font-size:18px;font-weight:600;color:#E8E6E1;margin:8px 0 4px">$1</span>')
+    .replace(/\n- /g,"\n• ")
+    .replace(/\n/g,"<br/>");
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#0D1117", display:"flex", flexDirection:"column", color:"#E8E6E1", fontFamily:"'Crimson Pro',serif" }}>
+      <style>{`
+        .app-header{background:#0D1117;border-bottom:1px solid #21262D;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+        .logo-badge{width:34px;height:34px;background:linear-gradient(135deg,#2D6A4F,#1D3557);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;}
+        .role-pill{display:flex;align-items:center;gap:7px;background:#161B22;border:1px solid #30363D;border-radius:20px;padding:5px 13px;cursor:pointer;font-family:'Crimson Pro',serif;font-size:14px;color:#C9D1D9;transition:all 0.2s;}
+        .role-pill:hover{border-color:#58A6FF;color:#58A6FF;}
+        .icon-btn{background:none;border:1px solid #30363D;color:#6E7681;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;}
+        .icon-btn:hover{border-color:#58A6FF;color:#58A6FF;}
+        .depot-btn{background:none;border:1px solid #2D4A6E;color:#4A7AAA;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;}
+        .depot-btn:hover{border-color:#79C0FF;color:#79C0FF;background:#0D1520;}
+        .admin-btn{background:none;border:1px solid #1A2030;color:#3D5066;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;}
+        .admin-btn:hover{border-color:#4A6080;color:#6E7681;}
+        .role-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px);}
+        .role-modal{background:#161B22;border:1px solid #30363D;border-radius:16px;padding:36px;max-width:460px;width:90%;animation:fadeUp 0.3s ease;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .role-option{display:flex;align-items:center;gap:14px;background:#0D1117;border:1px solid #30363D;border-radius:10px;padding:13px 16px;cursor:pointer;transition:all 0.2s;width:100%;text-align:left;margin-bottom:8px;}
+        .role-option:hover{border-color:#58A6FF;background:#161B22;transform:translateX(4px);}
+        .msg-row{display:flex;margin-bottom:18px;animation:msgIn 0.25s ease;}
+        @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .msg-row.user{justify-content:flex-end;}
+        .msg-bubble{max-width:80%;padding:13px 16px;border-radius:14px;font-family:'Crimson Pro',serif;font-size:16px;line-height:1.65;}
+        .msg-bubble.user{background:#1D3557;border:1px solid #2D4A6E;color:#E8E6E1;border-bottom-right-radius:4px;}
+        .msg-bubble.assistant{background:#161B22;border:1px solid #21262D;color:#C9D1D9;border-bottom-left-radius:4px;}
+        .msg-bubble strong{color:#79C0FF;font-weight:600;}
+        .msg-bubble em{color:#8B949E;}
+        .msg-bubble code{font-family:'JetBrains Mono',monospace;font-size:13px;background:#0D1117;padding:2px 6px;border-radius:4px;color:#79C0FF;}
+        .avatar{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2D6A4F,#1D3557);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:2px;margin-right:9px;}
+        .dot{width:7px;height:7px;border-radius:50%;background:#58A6FF;animation:bounce 1.2s infinite;display:inline-block;margin:0 2px;}
+        .dot:nth-child(2){animation-delay:0.2s}.dot:nth-child(3){animation-delay:0.4s}
+        @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-6px);opacity:1}}
+        .quick-btn{background:#161B22;border:1px solid #30363D;color:#8B949E;border-radius:20px;padding:6px 13px;font-family:'Crimson Pro',serif;font-size:14px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+        .quick-btn:hover{border-color:#58A6FF;color:#58A6FF;}
+        .chat-input{flex:1;background:#161B22;border:1px solid #30363D;border-radius:12px;padding:11px 15px;color:#E8E6E1;font-family:'Crimson Pro',serif;font-size:16px;resize:none;min-height:46px;max-height:120px;outline:none;transition:border-color 0.2s;line-height:1.5;}
+        .chat-input:focus{border-color:#58A6FF;}
+        .chat-input::placeholder{color:#6E7681;}
+        .send-btn{background:#1D3557;border:1px solid #2D4A6E;color:#79C0FF;border-radius:10px;padding:11px 16px;cursor:pointer;font-size:18px;transition:all 0.2s;height:46px;display:flex;align-items:center;}
+        .send-btn:hover:not(:disabled){background:#2D4A6E;}
+        .send-btn:disabled{opacity:0.4;cursor:not-allowed;}
+      `}</style>
+
+      {/* Role modal */}
+      {(!role || showRoleModal) && (
+        <div className="role-overlay">
+          <div className="role-modal">
+            <div style={{ textAlign:"center", fontSize:34, marginBottom:10 }}>⚕️</div>
+            <div style={{ fontFamily:"'Crimson Pro',serif", fontSize:24, fontWeight:600, color:"#E8E6E1", textAlign:"center", marginBottom:6 }}>Hertughaven</div>
+            <div style={{ fontFamily:"'Crimson Pro',serif", fontSize:14, color:"#8B949E", textAlign:"center", marginBottom:24, fontStyle:"italic" }}>Faglig sparringspartner · Sønderborg Kommune</div>
+            {ROLES.map(r => (
+              <button key={r.id} className="role-option" onClick={() => selectRole(r.id)}>
+                <span style={{ fontSize:20 }}>{r.icon}</span>
+                <span style={{ fontFamily:"'Crimson Pro',serif", fontSize:16, fontWeight:600, color:"#E8E6E1" }}>{r.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showAdminLogin && <AdminLogin onSuccess={() => { setShowAdminLogin(false); setShowDashboard(true); }} onCancel={() => setShowAdminLogin(false)} />}
+      {showDashboard && <Dashboard onClose={() => setShowDashboard(false)} />}
+      {showDepot && <DepotModule onClose={() => setShowDepot(false)} />}
+
+      {/* Header */}
+      <div className="app-header">
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <div className="logo-badge">⚕️</div>
+          <div>
+            <div style={{ fontFamily:"'Crimson Pro',serif", fontSize:18, fontWeight:600, color:"#E8E6E1" }}>Hertughaven</div>
+            <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#6E7681", letterSpacing:"0.1em", textTransform:"uppercase" }}>Socialpsykiatri · Sønderborg</div>
+          </div>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+          {role && (
+            <button className="role-pill" onClick={() => setShowRoleModal(true)}>
+              <span>{ROLES.find(r=>r.id===role)?.icon}</span>
+              <span>{role}</span>
+            </button>
+          )}
+          <button className="depot-btn" onClick={() => setShowDepot(true)}>💉 Depot</button>
+          <button className="icon-btn" onClick={clearHistory}>↺ Ny</button>
+          <button className="admin-btn" onClick={() => setShowAdminLogin(true)}>⚙ Admin</button>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex:1, overflowY:"auto", padding:"22px 18px", maxWidth:800, width:"100%", margin:"0 auto" }}>
+        {messages.length===0 && role && (
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"60px 20px", textAlign:"center" }}>
+            <div style={{ fontSize:44, marginBottom:14 }}>{ROLES.find(r=>r.id===role)?.icon}</div>
+            <div style={{ fontFamily:"'Crimson Pro',serif", fontSize:21, fontWeight:600, color:"#E8E6E1", marginBottom:6 }}>Klar til at hjælpe, {role}</div>
+            <div style={{ fontFamily:"'Crimson Pro',serif", fontSize:14, color:"#6E7681", fontStyle:"italic" }}>Stil et spørgsmål eller vælg en genvej nedenfor</div>
+          </div>
+        )}
+        {messages.map((m,i) => (
+          <div key={i} className={`msg-row ${m.role}`}>
+            {m.role==="assistant" && <div className="avatar">⚕️</div>}
+            <div className={`msg-bubble ${m.role}`} dangerouslySetInnerHTML={{__html:fmt(m.content)}} />
+          </div>
+        ))}
+        {loading && (
+          <div className="msg-row assistant">
+            <div className="avatar">⚕️</div>
+            <div className="msg-bubble assistant" style={{ padding:"14px 18px" }}>
+              <div className="dot"/><div className="dot"/><div className="dot"/>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Quick actions */}
+      {role && messages.length<=1 && (
+        <div style={{ maxWidth:800, width:"100%", margin:"0 auto", padding:"0 18px 10px", display:"flex", gap:7, flexWrap:"wrap" }}>
+          {(QUICK_ACTIONS[role]||[]).map(a => (
+            <button key={a} className="quick-btn" onClick={() => handleQuick(a)}>{a}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      {role && (
+        <div style={{ borderTop:"1px solid #21262D", padding:"14px 18px", maxWidth:800, width:"100%", margin:"0 auto" }}>
+          <div style={{ display:"flex", gap:9, alignItems:"flex-end" }}>
+            <textarea ref={inputRef} className="chat-input" value={input} onChange={e=>setInput(e.target.value)}
+              onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}}}
+              placeholder="Skriv dit spørgsmål eller beskriv en situation..." rows={1} disabled={loading} />
+            <button className="send-btn" onClick={() => sendMessage()} disabled={!input.trim()||loading}>↑</button>
+          </div>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#3D444D", textAlign:"center", marginTop:7, letterSpacing:"0.05em" }}>
+            ENTER for at sende · SHIFT+ENTER for linjeskift
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
