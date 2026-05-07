@@ -11,66 +11,59 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0D1117; color: #E8E6E1; font-family: 'Crimson Pro', serif; }
+body { background: #F0F4F8; color: #1A2332; font-family: 'Crimson Pro', serif; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #30363D; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #90A4AE; border-radius: 3px; }
 </style>
 </head>
 <body>
 <div id="root"></div>
-
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `Du er en avanceret AI-mentor, fagspecialist og sikkerhedsvejleder for Hertughaven - et kommunalt doegntilbud i socialpsykiatrien (Soenderborg Kommune). Din opgave er at traene og sparre med et tvaerfagligt team og ledelsen.
 
-const SYSTEM_PROMPT = `Du er en avanceret AI-mentor, fagspecialist og sikkerhedsvejleder for Hertughaven – et kommunalt døgntilbud i socialpsykiatrien (Sønderborg Kommune). Din opgave er at træne og sparre med et tværfagligt team og ledelsen.
-
-NØGLEPERSONER:
+NOEGGLEPERSONER:
 - Centerleder: Anders
 - Daglig leder: Jacob
 - AMR: Dennis og Laila
 - TR for FOA: Robert
 - TR for SL: Rikke L.
 
-FÆLLES FUNDAMENT (LA2 & SIKKERHEDSTAVLEN):
+FAELLES FUNDAMENT (LA2 & SIKKERHEDSTAVLEN):
 - Sikkerhedstavlen er det centrale styringsredskab
-- Alle medarbejdere skal kende pædagogiske tiltag (Mestringsstrategier) fra tavlen
-- Faste risikovurderinger (BVC) afholdes i HVER vagt – må ikke springes over
+- Alle medarbejdere skal kende paedagogiske tiltag (Mestringsstrategier) fra tavlen
+- Faste risikovurderinger (BVC) afholdes i HVER vagt - maa ikke springes over
 
-SIKKERHEDSREGLER (SKAL OVERHOLDES):
-1. MINDSTEMÅL-PRINCIPPET: Utryghed = gå altid 2 personaler eller træk dig
-2. BVC & SIKKERHEDSTAVLEN:
-   - 24-timers reglen: Rød/Gul kræver 24 timer uden score før nedjustering
-   - Rød Zone: ALTID 2 personaler. Ingen kørsel (kun nød)
+SIKKERHEDSREGLER:
+1. MINDSTEMAAL-PRINCIPPET: Utryghed = gaa altid 2 personaler eller traek dig
+2. BVC: 24-timers reglen: Rod/Gul kraever 24 timer uden score foer nedjustering. Rod Zone: ALTID 2 personaler.
 3. NORMERING: Min. 4 personaler i huset. Ved min. normering: Ingen udgang
-4. AKUT LEDELSE: Kontakt Jacob/Anders straks (døgnet rundt) ved: Politi, Skadestue/Læge, eller kollega forlader vagt pga. episode
+4. AKUT LEDELSE: Kontakt Jacob/Anders straks ved: Politi, Skadestue/Laege, eller kollega forlader vagt pga. episode
 5. DOKUMENTATION: SafetyNet (VMP) via Insite og Cura
 
 PROFILER:
-- SSA/Sygeplejerske: Medicin (pro.medicin.dk niveau), somatik, observationer. Fagorg: Robert (TR)
-- Pædagog: KRAP, Metakognitiv terapi, relationel koordinering. Fagorg: Rikke L. (TR)
-- Socialfaglig: Lovgivning, handleplaner, §-status, koordinering
-- Leder: Personaleledelse, procedurer, bemanding. Personalemøde hver 3. uge, LMU hver 6. uge
+- SSA/Sygeplejerske: Medicin, somatik, observationer
+- Paedagog: KRAP, Metakognitiv terapi, relationel koordinering
+- Socialfaglig: Lovgivning, handleplaner, paragraf-status
+- Leder: Personaleledelse, procedurer, bemanding
 
-QUIZ-PROTOKOL (følg ALTID denne struktur):
+QUIZ-PROTOKOL:
 1. Feedback: Rigtigt eller forkert
-2. Uddybende forklaring: Hvorfor rigtigt/forkert
-3. Praksis-relevans: Hvorfor kritisk i dagligt arbejde
-4. Tilbud: Sværere spørgsmål (rigtigt) eller mere træning i samme emne (forkert)
+2. Uddybende forklaring
+3. Praksis-relevans
+4. Tilbud om svaerere eller lettere opfoelgning
 
 REGLER:
-- Tal ALDRIG ned til brugeren – antag ekspertise og brug korrekt terminologi
-- Opfind ALDRIG fakta – sig "Det ved jeg ikke med sikkerhed" og henvis til leder/kilde
-- Ved medicinændringer: Henvis til læge
+- Tal ALDRIG ned til brugeren
+- Opfind ALDRIG fakta
+- Ved medicinaendringer: Henvis til laege
 - Ved akut livsfare: Ring 112
-- Overhold GDPR – ingen borgeres navne
-- Basér svar på: pro.medicin.dk, sst.dk, retsinformation.dk og interne retningslinjer
+- Overhold GDPR
+- Den aktuelle brugers rolle er: {ROLE}
 
-Den aktuelle brugers rolle er: {ROLE}
-
-Tilpas al vejledning til denne rolle. Brug en varm, professionel og direkte tone.`;
+Brug en varm, professionel og direkte tone.`;
 
 const ROLES = [
   { id: "SSA", label: "SSA", icon: "💊" },
@@ -90,26 +83,175 @@ const QUICK_ACTIONS = {
 
 const ADMIN_PASSWORD = "hertughaven2024";
 
-const DEPOT_DRUGS = [
-  { id: "d1", name: "Abilify Maintena",  generic: "Aripiprazol" },
-  { id: "d2", name: "Risperdal Consta",  generic: "Risperidon" },
-  { id: "d3", name: "Xeplion",           generic: "Paliperidon palmitat" },
-  { id: "d4", name: "Zypadhera",         generic: "Olanzapin pamoat" },
-  { id: "d5", name: "Clopixol Depot",    generic: "Zuclopentixol" },
-  { id: "d6", name: "Fluanxol Depot",    generic: "Flupentixol" },
-  { id: "d7", name: "Haldol Decanoat",   generic: "Haloperidol" },
-  { id: "d8", name: "Invega Trinza",     generic: "Paliperidon palmitat 3M" },
+const STAFF_ROLES = [
+  "Sygeplejerske",
+  "Social- og Sundhedsassistent",
+  "Social- og Sundhedshjælper",
+  "Pædagog / Terapeut / PAU",
+  "Ufaglært / Omsorgsmedarbejder",
 ];
+
+const DEPOT_DRUGS = [
+  { id: "d1", name: "Abilify Maintena", generic: "Aripiprazol" },
+  { id: "d2", name: "Risperdal Consta", generic: "Risperidon" },
+  { id: "d3", name: "Xeplion", generic: "Paliperidon palmitat" },
+  { id: "d4", name: "Zypadhera", generic: "Olanzapin pamoat" },
+  { id: "d5", name: "Clopixol Depot", generic: "Zuclopentixol" },
+  { id: "d6", name: "Fluanxol Depot", generic: "Flupentixol" },
+  { id: "d7", name: "Haldol Decanoat", generic: "Haloperidol" },
+  { id: "d8", name: "Invega Trinza", generic: "Paliperidon palmitat 3M" },
+];
+
+// Kompetenceprofiler — niveauer per faggruppe [Sygeplejerske, SSA, SSH, Pædagog, Ufaglært]
+// X = basiskompetence, O = borgerspecifik/oplæring
+const COMP_CATS = [
+  { cat: "Koordinering og forløbsledelse", items: [
+    { id:"k1", name:"Koordinering alvorligt syge", lv:["X","","","",""] },
+    { id:"k2", name:"Opfølgende besøg efter udskrivelse", lv:["X","","","",""] },
+    { id:"k3", name:"Kommunikation med samarbejdspartnere", lv:["X","X","","X",""] },
+    { id:"k4", name:"Tværfaglig teamøde med borger", lv:["X","X","","X",""] },
+  ]},
+  { cat: "Opfølgning", items: [
+    { id:"o1", name:"Opfølgende behandling", lv:["X","X","","",""] },
+    { id:"o2", name:"Opfølgning tilstande", lv:["X","","","",""] },
+  ]},
+  { cat: "Sygeplejefaglig udredning", items: [
+    { id:"su1", name:"Sygeplejefaglig udredning", lv:["X","","","",""] },
+    { id:"su2", name:"Fagligt tilsyn terminale", lv:["X","","","",""] },
+    { id:"su3", name:"Forventningsafklaring med borger", lv:["X","","","",""] },
+    { id:"su4", name:"Triagering efter ABCDE", lv:["X","X","","",""] },
+  ]},
+  { cat: "Medicinadministration", items: [
+    { id:"md1", name:"Medicinadministration", lv:["X","X","O","",""] },
+    { id:"md2", name:"Tabletter PN dispenseret i æsker", lv:["X","X","","",""] },
+    { id:"md3", name:"Klyx – afføringsmiddel", lv:["X","X","O","",""] },
+    { id:"md4", name:"Klygsma (tube)", lv:["X","X","X","X",""] },
+    { id:"md5", name:"Subkutan injektion", lv:["X","X","X","",""] },
+    { id:"md6", name:"Subkutan injektion, korvulfyldte", lv:["X","X","O","O",""] },
+    { id:"md7", name:"Intramuskulær injektion", lv:["X","O","","",""] },
+    { id:"md8", name:"Insulin", lv:["X","X","O","",""] },
+    { id:"md9", name:"Medicinsk plaster", lv:["X","X","O","O",""] },
+    { id:"md10", name:"Inhalation", lv:["X","X","O","",""] },
+    { id:"md11", name:"Anlæggelse af subkutan kanyle", lv:["X","O","","",""] },
+    { id:"md12", name:"System 22", lv:["X","","","",""] },
+    { id:"md13", name:"Oral opløsning", lv:["X","X","X","X","X"] },
+    { id:"md14", name:"Næsespray / øjendråber", lv:["X","X","O","O",""] },
+  ]},
+  { cat: "Medicindispensering", items: [
+    { id:"mdi1", name:"Medicindispensering", lv:["X","O","","",""] },
+    { id:"mdi2", name:"AK-behandling", lv:["X","O","","",""] },
+  ]},
+  { cat: "Intravenøs behandling", items: [
+    { id:"iv1", name:"Intravenøs medicinsk behandling", lv:["X","","","",""] },
+    { id:"iv2", name:"Væske via CVK", lv:["X","","","",""] },
+    { id:"iv3", name:"Væske via perifer venflon", lv:["X","O","","",""] },
+    { id:"iv4", name:"Pleje af central venskekater", lv:["X","X","","",""] },
+    { id:"iv5", name:"Anlæggelse af perifer venflon", lv:["X","","","",""] },
+  ]},
+  { cat: "Kateterpleje", items: [
+    { id:"ka1", name:"Kateterpleje", lv:["X","O","O","",""] },
+    { id:"ka2", name:"Tømning/skift af kateterpose", lv:["X","X","X","",""] },
+    { id:"ka3", name:"Katerskylning", lv:["X","O","O","",""] },
+    { id:"ka4", name:"RIK kvinder", lv:["X","X","O","",""] },
+    { id:"ka5", name:"Anlæggelse af kateter kvinder", lv:["X","O","","",""] },
+  ]},
+  { cat: "Sårbehandling", items: [
+    { id:"sb1", name:"Sårbehandling", lv:["X","X","O","",""] },
+    { id:"sb2", name:"Forebyggelse af tryksår", lv:["X","X","X","X",""] },
+    { id:"sb3", name:"Pleje af hudproblemer", lv:["X","X","","",""] },
+  ]},
+  { cat: "Undersøgelser og målinger", items: [
+    { id:"uv1", name:"Afføringsprøve", lv:["X","X","X","X",""] },
+    { id:"uv2", name:"Blodsukkermåling", lv:["X","X","O","O",""] },
+    { id:"uv3", name:"BT / Puls / Respiration", lv:["X","X","O","O",""] },
+    { id:"uv4", name:"CRP / Hgb", lv:["X","X","","",""] },
+    { id:"uv5", name:"SAT", lv:["X","X","O","O",""] },
+    { id:"uv6", name:"Temperatur", lv:["X","X","X","X","X"] },
+    { id:"uv7", name:"Urinprøve", lv:["X","X","X","X","X"] },
+    { id:"uv8", name:"Lungevolumenprøve", lv:["X","X","","",""] },
+  ]},
+  { cat: "ILT og respiration", items: [
+    { id:"ir1", name:"BiPAP og CPAP", lv:["X","O","O","O","O"] },
+    { id:"ir2", name:"PEP maske / fløjte", lv:["X","X","X","X","X"] },
+    { id:"ir3", name:"Respirationsøvelser", lv:["X","X","O","O",""] },
+    { id:"ir4", name:"Speciel mundpleje", lv:["X","X","X","X",""] },
+    { id:"ir5", name:"Sekretsuging", lv:["X","O","","",""] },
+    { id:"ir6", name:"Trakeostomipleje", lv:["X","O","","",""] },
+  ]},
+  { cat: "Ernæring", items: [
+    { id:"er1", name:"Støtte til måltid", lv:["X","X","X","X","X"] },
+    { id:"er2", name:"Kostvejledning", lv:["X","X","","",""] },
+    { id:"er3", name:"Ernæringsvurdering", lv:["X","X","","",""] },
+    { id:"er4", name:"Sondeernæring nasogastrisk", lv:["X","X","","",""] },
+    { id:"er5", name:"Anlæggelse af nasogastrisk sonde", lv:["X","","","",""] },
+    { id:"er6", name:"Sondeernæring gastrostomi", lv:["X","X","O","",""] },
+    { id:"er7", name:"Parenteral ernæring", lv:["X","","","",""] },
+  ]},
+  { cat: "Personlig pleje", items: [
+    { id:"pp1", name:"Personlig pleje", lv:["X","X","X","X","X"] },
+  ]},
+  { cat: "Psykiatrisk pleje", items: [
+    { id:"ps1", name:"Psykisk støtte", lv:["X","X","X","X",""] },
+    { id:"ps2", name:"Psykiatrisk pleje og opfølgning", lv:["X","X","","",""] },
+  ]},
+  { cat: "Forflytning og rehabilitering", items: [
+    { id:"fm1", name:"Forflytning, vending og lejring", lv:["X","X","X","X","O"] },
+    { id:"re1", name:"Rehabilitering", lv:["X","X","X","X","O"] },
+    { id:"re2", name:"Oplæring af borgere og netværk", lv:["X","X","O","X","O"] },
+  ]},
+  { cat: "Supplerende udredning", items: [
+    { id:"spu1", name:"Smertvurdering / VAS", lv:["X","O","","",""] },
+    { id:"spu2", name:"Kognitiv vurdering / CAM", lv:["X","","","",""] },
+    { id:"spu3", name:"Faldudredning", lv:["X","","","",""] },
+  ]},
+  { cat: "Stomipleje", items: [
+    { id:"st1", name:"Stomipleje og behandling", lv:["X","X","O","",""] },
+    { id:"st2", name:"Stomiposesk ift / tømning", lv:["X","X","O","O",""] },
+  ]},
+  { cat: "Væske og cirkulation", items: [
+    { id:"vb1", name:"Vurdering af væskebalance", lv:["X","X","","",""] },
+    { id:"vb2", name:"Føre væskeskema", lv:["X","X","X","X",""] },
+    { id:"vb3", name:"Subkutan væskebehandling", lv:["X","O","","",""] },
+    { id:"ci1", name:"Anlæggelse af kompressionsforbinding", lv:["X","X","","",""] },
+    { id:"ci2", name:"Kompressionsstrømper af og på", lv:["X","X","X","O",""] },
+  ]},
+  { cat: "Øvrige", items: [
+    { id:"id1", name:"Istandgørelse ved dødsfald", lv:["X","X","X","X","O"] },
+    { id:"sbn1", name:"Vejledning af borger og netværk", lv:["X","X","O","X","O"] },
+    { id:"di1", name:"Varetagelse af dialyse", lv:["X","O","","",""] },
+  ]},
+];
+
+const ROLE_COL = {
+  "Sygeplejerske": 0,
+  "Social- og Sundhedsassistent": 1,
+  "Social- og Sundhedshjælper": 2,
+  "Pædagog / Terapeut / PAU": 3,
+  "Ufaglært / Omsorgsmedarbejder": 4,
+};
+
+function getBaseProfile(staffRole) {
+  const col = ROLE_COL[staffRole];
+  if (col === undefined) return {};
+  const result = {};
+  COMP_CATS.forEach(cat => {
+    cat.items.forEach(item => {
+      const lv = item.lv[col];
+      if (lv) result[item.id] = { level: lv, flagged: false };
+    });
+  });
+  return result;
+}
 
 const DEFAULT_STAFF = [
-  { id: "s1", name: "Maria Andersen",      role: "Sygeplejerske" },
-  { id: "s2", name: "Poul Sørensen",       role: "Sygeplejerske" },
+  { id: "s1", name: "Maria Andersen", role: "Sygeplejerske" },
+  { id: "s2", name: "Poul Sørensen", role: "Sygeplejerske" },
   { id: "s3", name: "Lena Christoffersen", role: "Sygeplejerske" },
-  { id: "s4", name: "Jonas Bech",          role: "Sosu-assistent" },
-  { id: "s5", name: "Anette Møller",       role: "Sygeplejerske" },
+  { id: "s4", name: "Jonas Bech", role: "Social- og Sundhedsassistent" },
+  { id: "s5", name: "Anette Møller", role: "Sygeplejerske" },
 ];
 
-const DEFAULT_COMPETENCIES = {
+const DEFAULT_DEPOT = {
   s1: { d1:{approved:true,expiry:"2025-11-01"}, d2:{approved:true,expiry:"2026-03-15"}, d5:{approved:true,expiry:"2025-06-01"} },
   s2: { d1:{approved:true,expiry:"2026-08-20"}, d4:{approved:true,expiry:"2026-01-10"}, d6:{approved:true,expiry:"2026-09-01"} },
   s3: { d2:{approved:true,expiry:"2026-12-01"}, d3:{approved:true,expiry:"2026-05-01"}, d7:{approved:true,expiry:"2025-09-30"} },
@@ -117,528 +259,506 @@ const DEFAULT_COMPETENCIES = {
   s5: { d1:{approved:true,expiry:"2027-01-01"}, d2:{approved:true,expiry:"2027-01-01"}, d8:{approved:true,expiry:"2026-11-01"} },
 };
 
-// ─── Storage ──────────────────────────────────────────────────────────────────
-
 const storage = {
-  get: (key, fallback = null) => {
-    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
-  },
-  set: (key, val) => {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-  },
+  get: (key, fallback=null) => { try { const v=localStorage.getItem(key); return v?JSON.parse(v):fallback; } catch { return fallback; } },
+  set: (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} },
 };
 
-function trackEvent(type, data = {}) {
-  const events = storage.get("hh_events", []);
-  events.push({ type, data, ts: Date.now(), date: new Date().toISOString().split("T")[0] });
-  if (events.length > 2000) events.splice(0, events.length - 2000);
-  storage.set("hh_events", events);
+function trackEvent(type, data={}) {
+  const ev=storage.get("hh_events",[]); ev.push({type,data,ts:Date.now(),date:new Date().toISOString().split("T")[0]});
+  if(ev.length>2000)ev.splice(0,ev.length-2000); storage.set("hh_events",ev);
 }
-
-// ─── API ──────────────────────────────────────────────────────────────────────
 
 async function callClaude(messages, role) {
-  const systemPrompt = SYSTEM_PROMPT.replace("{ROLE}", role);
-  const response = await fetch("https://holy-sound-c182.destinycomes2.workers.dev", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      max_tokens: 1000,
-      system: systemPrompt,
-      messages,
-    }),
+  const sp = SYSTEM_PROMPT.replace("{ROLE}", role);
+  const res = await fetch("https://holy-sound-c182.destinycomes2.workers.dev", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:1000,system:sp,messages}),
   });
-  const data = await response.json();
-  return data.content?.map(b => b.text || "").join("") || "Fejl: Intet svar modtaget.";
+  const data = await res.json();
+  return data.content?.map(b=>b.text||"").join("") || "Fejl: Intet svar modtaget.";
 }
 
-// ─── Depot helpers ────────────────────────────────────────────────────────────
+const td = new Date(); td.setHours(0,0,0,0);
+const isExp = d => d && new Date(d)<td;
+const isSoon = d => { if(!d)return false; const diff=(new Date(d)-td)/86400000; return diff>=0&&diff<=60; };
+const fmtDate = d => d ? new Date(d).toLocaleDateString("da-DK",{day:"numeric",month:"short",year:"numeric"}) : "–";
+const inits = n => n.split(" ").map(p=>p[0]).join("").slice(0,2).toUpperCase();
+const cSt = (ok,exp) => !ok?"none":isExp(exp)?"expired":isSoon(exp)?"soon":"ok";
+const SC = {ok:"#00897B",soon:"#F57C00",expired:"#D32F2F",none:"#90A4AE"};
+const SL = {ok:"Godkendt",soon:"Udløber snart",expired:"Udløbet",none:"Ikke godkendt"};
 
-const todayDate = new Date();
-todayDate.setHours(0,0,0,0);
-
-function isExpired(dateStr) {
-  if (!dateStr) return false;
-  return new Date(dateStr) < todayDate;
+function Badge({approved,expiry}) {
+  const st=cSt(approved,expiry),c=SC[st];
+  return <span style={{fontSize:11,fontFamily:"'JetBrains Mono',monospace",fontWeight:600,padding:"4px 10px",borderRadius:4,background:c+"20",color:c,border:`1px solid ${c}40`,whiteSpace:"nowrap"}}>{SL[st]}</span>;
 }
 
-function isSoonExpiring(dateStr) {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
-  const diff = (d - todayDate) / (1000 * 60 * 60 * 24);
-  return diff >= 0 && diff <= 60;
-}
-
-function formatDate(d) {
-  if (!d) return "–";
-  return new Date(d).toLocaleDateString("da-DK", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function initials(name) {
-  return name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
-}
-
-function competencyStatus(approved, expiry) {
-  if (!approved) return "none";
-  if (isExpired(expiry)) return "expired";
-  if (isSoonExpiring(expiry)) return "soon";
-  return "ok";
-}
-
-const STATUS_COLOR = { ok: "#2DD4A0", soon: "#F7884F", expired: "#F75454", none: "#3D5066" };
-const STATUS_LABEL = { ok: "Godkendt", soon: "Udløber snart", expired: "Udløbet", none: "Ikke godkendt" };
-
-function StatusBadge({ approved, expiry }) {
-  const st = competencyStatus(approved, expiry);
-  const c = STATUS_COLOR[st];
+// ─── Add Staff Modal ──────────────────────────────────────────────────────────
+function AddStaffModal({onAdd,onClose}) {
+  const [name,setName]=useState(""); const [role,setRole]=useState(STAFF_ROLES[0]);
+  const save = () => { if(!name.trim())return; onAdd({id:"s"+Date.now(),name:name.trim(),role}); };
   return (
-    <span style={{
-      fontSize: 11, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600,
-      padding: "4px 10px", borderRadius: 4, letterSpacing: "0.05em",
-      background: c + "20", color: c, border: `1px solid ${c}40`, whiteSpace: "nowrap",
-    }}>{STATUS_LABEL[st]}</span>
-  );
-}
-
-// ─── Depot Edit Modal ─────────────────────────────────────────────────────────
-
-function DepotEditModal({ staffMember, competencies, onSave, onClose }) {
-  const [draft, setDraft] = useState(() => {
-    const c = competencies[staffMember.id] || {};
-    return DEPOT_DRUGS.reduce((acc, d) => {
-      acc[d.id] = { approved: c[d.id]?.approved || false, expiry: c[d.id]?.expiry || "" };
-      return acc;
-    }, {});
-  });
-
-  const toggle = (drugId) => setDraft(prev => ({ ...prev, [drugId]: { ...prev[drugId], approved: !prev[drugId].approved } }));
-  const setExpiry = (drugId, val) => setDraft(prev => ({ ...prev, [drugId]: { ...prev[drugId], expiry: val } }));
-
-  const save = () => {
-    const result = {};
-    DEPOT_DRUGS.forEach(d => {
-      if (draft[d.id].approved) result[d.id] = { approved: true, expiry: draft[d.id].expiry || null };
-    });
-    onSave(staffMember.id, result);
-  };
-
-  return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:400, backdropFilter:"blur(6px)" }}>
-      <div style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:16, padding:28, width:"min(540px,94vw)", maxHeight:"85vh", overflowY:"auto" }}>
-        <div style={{ fontSize:18, fontWeight:600, color:"#E8E6E1", marginBottom:4 }}>Rediger kompetencer</div>
-        <div style={{ fontSize:13, color:"#4A6080", marginBottom:20, fontFamily:"'JetBrains Mono',monospace" }}>{staffMember.name} · {staffMember.role}</div>
-
-        {DEPOT_DRUGS.map(d => {
-          const entry = draft[d.id];
-          return (
-            <div key={d.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", borderRadius:8, marginBottom:8, background:"#161B22", border:`1px solid ${entry.approved?"#2D4A6E":"#1A2030"}` }}>
-              <input type="checkbox" checked={entry.approved} onChange={() => toggle(d.id)} style={{ accentColor:"#58A6FF", width:16, height:16, flexShrink:0, cursor:"pointer" }} />
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:15, color:"#C9D1D9", fontWeight:entry.approved?600:400 }}>{d.name}</div>
-                <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{d.generic}</div>
-              </div>
-              {entry.approved && (
-                <input type="date" value={entry.expiry} onChange={e => setExpiry(d.id, e.target.value)}
-                  style={{ background:"#080C10", border:"1px solid #2D4A6E", borderRadius:6, padding:"5px 9px", color:"#79C0FF", fontFamily:"'JetBrains Mono',monospace", fontSize:12, outline:"none" }} />
-              )}
-            </div>
-          );
-        })}
-
-        <div style={{ display:"flex", gap:10, marginTop:20, justifyContent:"flex-end" }}>
-          <button onClick={onClose} style={{ background:"none", border:"1px solid #1A2030", color:"#6E7681", borderRadius:8, padding:"9px 18px", cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:15 }}>Annuller</button>
-          <button onClick={save} style={{ background:"#1D3557", border:"1px solid #2D4A6E", color:"#79C0FF", borderRadius:8, padding:"9px 20px", cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:15, fontWeight:600 }}>Gem</button>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(6px)"}}>
+      <div style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:16,padding:28,width:"min(440px,94vw)"}}>
+        <div style={{fontSize:18,fontWeight:600,color:"#1A2332",marginBottom:20}}>Tilføj medarbejder</div>
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Navn</div>
+          <input value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&save()} autoFocus placeholder="Fulde navn..."
+            style={{width:"100%",background:"#E8EEF4",border:"1px solid #C8D6E2",borderRadius:8,padding:"10px 14px",color:"#1A2332",fontFamily:"'Crimson Pro',serif",fontSize:16,outline:"none"}}/>
+        </div>
+        <div style={{marginBottom:22}}>
+          <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Faggruppe</div>
+          <select value={role} onChange={e=>setRole(e.target.value)}
+            style={{width:"100%",background:"#E8EEF4",border:"1px solid #C8D6E2",borderRadius:8,padding:"10px 14px",color:"#1A2332",fontFamily:"'Crimson Pro',serif",fontSize:15,outline:"none"}}>
+            {STAFF_ROLES.map(r=><option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{background:"none",border:"1px solid #C8D6E2",color:"#607D8B",borderRadius:8,padding:"9px 18px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15}}>Annuller</button>
+          <button onClick={save} disabled={!name.trim()} style={{background:name.trim()?"#1565C0":"#FFFFFF",border:"1px solid #1565C0",color:name.trim()?"#1565C0":"#90A4AE",borderRadius:8,padding:"9px 20px",cursor:name.trim()?"pointer":"default",fontFamily:"'Crimson Pro',serif",fontSize:15,fontWeight:600}}>Tilføj</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Depot Staff View ─────────────────────────────────────────────────────────
-
-function DepotStaffView({ staff, competencies, onEdit }) {
-  const [selected, setSelected] = useState(null);
-  const [query, setQuery] = useState("");
-
-  const filtered = staff.filter(s => s.name.toLowerCase().includes(query.toLowerCase()) || s.role.toLowerCase().includes(query.toLowerCase()));
-  const selectedMember = staff.find(s => s.id === selected);
-
-  const getStats = (staffId) => {
-    const comp = competencies[staffId] || {};
-    let ok = 0, expired = 0, soon = 0;
-    Object.values(comp).forEach(c => {
-      if (!c.approved) return;
-      const st = competencyStatus(c.approved, c.expiry);
-      if (st === "ok") ok++; else if (st === "expired") expired++; else if (st === "soon") soon++;
-    });
-    return { ok, expired, soon };
-  };
-
+// ─── Depot Edit Modal ─────────────────────────────────────────────────────────
+function DepotEditModal({staffMember,depotData,onSave,onClose}) {
+  const [draft,setDraft]=useState(()=>{
+    const c=depotData[staffMember.id]||{};
+    return DEPOT_DRUGS.reduce((a,d)=>{a[d.id]={approved:c[d.id]?.approved||false,expiry:c[d.id]?.expiry||""};return a},{});
+  });
+  const toggle=id=>setDraft(p=>({...p,[id]:{...p[id],approved:!p[id].approved}}));
+  const setExp=(id,v)=>setDraft(p=>({...p,[id]:{...p[id],expiry:v}}));
+  const save=()=>{const r={};DEPOT_DRUGS.forEach(d=>{if(draft[d.id].approved)r[d.id]={approved:true,expiry:draft[d.id].expiry||null};});onSave(staffMember.id,r);};
   return (
-    <div style={{ display:"flex", height:"100%", minHeight:0 }}>
-      {/* List */}
-      <div style={{ width:240, flexShrink:0, borderRight:"1px solid #1A2030", overflowY:"auto", padding:"14px 10px" }}>
-        <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Søg medarbejder..."
-          style={{ width:"100%", background:"#080C10", border:"1px solid #1A2030", borderRadius:8, padding:"9px 12px", color:"#E8E6E1", fontFamily:"'Crimson Pro',serif", fontSize:14, outline:"none", marginBottom:10 }} />
-        {filtered.map(s => {
-          const { ok, expired, soon } = getStats(s.id);
-          const hasIssue = expired > 0 || soon > 0;
-          const isSel = selected === s.id;
-          return (
-            <div key={s.id} onClick={() => setSelected(isSel ? null : s.id)}
-              style={{ padding:"11px 12px", borderRadius:10, marginBottom:6, background:isSel?"#161B22":"#0D1520", border:`1px solid ${isSel?"#2D4A6E":"#1A2030"}`, cursor:"pointer" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:9 }}>
-                <div style={{ width:32, height:32, borderRadius:"50%", background:"#080C10", border:`1.5px solid ${isSel?"#58A6FF":"#1A2030"}`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:600, color:"#58A6FF", flexShrink:0 }}>
-                  {initials(s.name)}
-                </div>
-                <div style={{ minWidth:0 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:"#C9D1D9", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.name}</div>
-                  <div style={{ fontSize:10, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{s.role}</div>
-                </div>
-              </div>
-              <div style={{ marginTop:7, fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:hasIssue?"#F7884F":"#2DD4A0" }}>
-                {ok} godkendt{ok!==1?"e":""}{hasIssue?` · ${expired+soon} problem${expired+soon!==1?"er":""}`:""}</div>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(6px)"}}>
+      <div style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:16,padding:28,width:"min(540px,94vw)",maxHeight:"85vh",overflowY:"auto"}}>
+        <div style={{fontSize:18,fontWeight:600,color:"#1A2332",marginBottom:4}}>Depot kompetencer</div>
+        <div style={{fontSize:13,color:"#78909C",marginBottom:20,fontFamily:"'JetBrains Mono',monospace"}}>{staffMember.name}</div>
+        {DEPOT_DRUGS.map(d=>{const e=draft[d.id];return(
+          <div key={d.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:8,marginBottom:8,background:"#EEF2F7",border:`1px solid ${e.approved?"#1565C0":"#C8D6E2"}`}}>
+            <input type="checkbox" checked={e.approved} onChange={()=>toggle(d.id)} style={{accentColor:"#1976D2",width:16,height:16,flexShrink:0,cursor:"pointer"}}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:15,color:"#2C3E50",fontWeight:e.approved?600:400}}>{d.name}</div>
+              <div style={{fontSize:11,color:"#78909C",fontFamily:"'JetBrains Mono',monospace"}}>{d.generic}</div>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Detail */}
-      <div style={{ flex:1, overflowY:"auto", padding:"22px 24px" }}>
-        {!selectedMember ? (
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:"#3D5066", fontStyle:"italic", fontSize:15, gap:10 }}>
-            <div style={{ fontSize:32, opacity:0.3 }}>💉</div>
-            Vælg en medarbejder for at se kompetencer
+            {e.approved&&<input type="date" value={e.expiry} onChange={ev=>setExp(d.id,ev.target.value)}
+              style={{background:"#E8EEF4",border:"1px solid #1565C0",borderRadius:6,padding:"5px 9px",color:"#1565C0",fontFamily:"'JetBrains Mono',monospace",fontSize:12,outline:"none"}}/>}
           </div>
-        ) : (
-          <>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, paddingBottom:18, borderBottom:"1px solid #1A2030" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                <div style={{ width:44, height:44, borderRadius:"50%", background:"#080C10", border:"2px solid #58A6FF", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'JetBrains Mono',monospace", fontSize:15, fontWeight:600, color:"#58A6FF" }}>
-                  {initials(selectedMember.name)}
-                </div>
-                <div>
-                  <div style={{ fontSize:18, fontWeight:600, color:"#E8E6E1" }}>{selectedMember.name}</div>
-                  <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace", marginTop:2 }}>{selectedMember.role}</div>
-                </div>
-              </div>
-              <button onClick={() => onEdit(selectedMember)}
-                style={{ background:"none", border:"1px solid #1A2030", color:"#6E7681", borderRadius:8, padding:"7px 14px", cursor:"pointer", fontFamily:"'JetBrains Mono',monospace", fontSize:11 }}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor="#58A6FF";e.currentTarget.style.color="#58A6FF"}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor="#1A2030";e.currentTarget.style.color="#6E7681"}}>
-                Rediger
-              </button>
-            </div>
-
-            <div style={{ fontSize:10, fontFamily:"'JetBrains Mono',monospace", color:"#3D5066", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:12 }}>Godkendte præparater</div>
-
-            {DEPOT_DRUGS.map(d => {
-              const c = (competencies[selectedMember.id] || {})[d.id];
-              if (!c?.approved) return null;
-              return (
-                <div key={d.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", borderRadius:10, marginBottom:7, background:"#0D1520", border:"1px solid #1A2030" }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14, fontWeight:600, color:"#C9D1D9" }}>{d.name}</div>
-                    <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{d.generic}</div>
-                  </div>
-                  {c.expiry && <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{formatDate(c.expiry)}</div>}
-                  <StatusBadge approved={c.approved} expiry={c.expiry} />
-                </div>
-              );
-            })}
-
-            {Object.values(competencies[selectedMember.id] || {}).filter(c => c.approved).length === 0 && (
-              <div style={{ color:"#3D5066", fontStyle:"italic", fontSize:14 }}>Ingen registrerede kompetencer</div>
-            )}
-          </>
-        )}
+        );})}
+        <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{background:"none",border:"1px solid #C8D6E2",color:"#607D8B",borderRadius:8,padding:"9px 18px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15}}>Annuller</button>
+          <button onClick={save} style={{background:"#1565C0",border:"1px solid #1565C0",color:"#1565C0",borderRadius:8,padding:"9px 20px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15,fontWeight:600}}>Gem</button>
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Depot Drug View ──────────────────────────────────────────────────────────
+// ─── Staff Detail Card ────────────────────────────────────────────────────────
+function StaffCard({member,depotData,profileData,activeRole,onEditDepot,onUpdateProfile,onDelete}) {
+  const [tab,setTab]=useState("depot");
+  const canEdit = activeRole==="Sygeplejerske";
+  const profile = profileData[member.id] || getBaseProfile(member.role);
+  const col = ROLE_COL[member.role];
+  const approvedDepot = DEPOT_DRUGS.filter(d=>(depotData[member.id]||{})[d.id]?.approved);
 
-function DepotDrugView({ staff, competencies }) {
-  const [selected, setSelected] = useState(null);
-  const [query, setQuery] = useState("");
+  const toggleFlag = itemId => {
+    if(!canEdit)return;
+    const cur=profile[itemId]||{};
+    onUpdateProfile(member.id,{...profile,[itemId]:{...cur,flagged:!cur.flagged}});
+  };
 
-  const filtered = DEPOT_DRUGS.filter(d => d.name.toLowerCase().includes(query.toLowerCase()) || d.generic.toLowerCase().includes(query.toLowerCase()));
-  const selectedDrug = DEPOT_DRUGS.find(d => d.id === selected);
-
-  const getCount = (drugId) => staff.filter(s => {
-    const c = (competencies[s.id] || {})[drugId];
-    return c?.approved && !isExpired(c.expiry);
-  }).length;
+  const tBtn=(id,lbl)=>(
+    <button onClick={()=>setTab(id)} style={{background:tab===id?"#1565C0":"none",border:`1px solid ${tab===id?"#1565C0":"#C8D6E2"}`,color:tab===id?"#1565C0":"#607D8B",borderRadius:7,padding:"6px 14px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11,letterSpacing:"0.05em"}}>{lbl}</button>
+  );
 
   return (
-    <div style={{ display:"flex", height:"100%", minHeight:0 }}>
-      <div style={{ width:240, flexShrink:0, borderRight:"1px solid #1A2030", overflowY:"auto", padding:"14px 10px" }}>
-        <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Søg præparat..."
-          style={{ width:"100%", background:"#080C10", border:"1px solid #1A2030", borderRadius:8, padding:"9px 12px", color:"#E8E6E1", fontFamily:"'Crimson Pro',serif", fontSize:14, outline:"none", marginBottom:10 }} />
-        {filtered.map(d => {
-          const count = getCount(d.id);
-          const isSel = selected === d.id;
-          return (
-            <div key={d.id} onClick={() => setSelected(isSel ? null : d.id)}
-              style={{ padding:"11px 12px", borderRadius:10, marginBottom:6, background:isSel?"#161B22":"#0D1520", border:`1px solid ${isSel?"#2D4A6E":"#1A2030"}`, cursor:"pointer" }}>
-              <div style={{ fontSize:13, fontWeight:600, color:"#C9D1D9" }}>{d.name}</div>
-              <div style={{ fontSize:10, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace", marginTop:2 }}>{d.generic}</div>
-              <div style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:count>0?"#2DD4A0":"#F75454", marginTop:7 }}>{count} godkendt{count!==1?"e":""} medarb.</div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div style={{ flex:1, overflowY:"auto", padding:"22px 24px" }}>
-        {!selectedDrug ? (
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:"#3D5066", fontStyle:"italic", fontSize:15, gap:10 }}>
-            <div style={{ fontSize:32, opacity:0.3 }}>💊</div>
-            Vælg et præparat for at se godkendte medarbejdere
-          </div>
-        ) : (
-          <>
-            <div style={{ marginBottom:20, paddingBottom:18, borderBottom:"1px solid #1A2030" }}>
-              <div style={{ fontSize:18, fontWeight:600, color:"#E8E6E1" }}>{selectedDrug.name}</div>
-              <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace", marginTop:3 }}>{selectedDrug.generic}</div>
-            </div>
-            <div style={{ fontSize:10, fontFamily:"'JetBrains Mono',monospace", color:"#3D5066", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:12 }}>Medarbejdere med kompetence</div>
-
-            {staff.map(s => {
-              const c = (competencies[s.id] || {})[selectedDrug.id];
-              if (!c?.approved) return null;
-              const st = competencyStatus(c.approved, c.expiry);
-              return { s, c, st };
-            }).filter(Boolean)
-              .sort((a,b) => ({ok:0,soon:1,expired:2}[a.st] - {ok:0,soon:1,expired:2}[b.st]))
-              .map(({s,c,st}) => (
-                <div key={s.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", borderRadius:10, marginBottom:7, background:"#0D1520", border:"1px solid #1A2030" }}>
-                  <div style={{ width:34, height:34, borderRadius:"50%", background:"#080C10", border:"1.5px solid #1A2030", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:600, color:"#58A6FF", flexShrink:0 }}>
-                    {initials(s.name)}
-                  </div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14, fontWeight:600, color:"#C9D1D9" }}>{s.name}</div>
-                    <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{s.role}</div>
-                  </div>
-                  {c.expiry && <div style={{ fontSize:11, color:"#4A6080", fontFamily:"'JetBrains Mono',monospace" }}>{formatDate(c.expiry)}</div>}
-                  <StatusBadge approved={c.approved} expiry={c.expiry} />
-                </div>
-              ))
-            }
-            {staff.filter(s => (competencies[s.id]||{})[selectedDrug.id]?.approved).length === 0 && (
-              <div style={{ color:"#3D5066", fontStyle:"italic", fontSize:14 }}>Ingen godkendte medarbejdere</div>
-            )}
-          </>
+    <div style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:12,padding:24}}>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:18,paddingBottom:16,borderBottom:"1px solid #C8D6E2"}}>
+        <div style={{width:44,height:44,borderRadius:"50%",background:"#E8EEF4",border:"2px solid #1976D2",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:15,fontWeight:600,color:"#1976D2",flexShrink:0}}>{inits(member.name)}</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:18,fontWeight:600,color:"#1A2332"}}>{member.name}</div>
+          <div style={{fontSize:11,color:"#78909C",fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{member.role}</div>
+        </div>
+        {canEdit&&(
+          <button onClick={()=>onDelete(member.id)}
+            style={{background:"none",border:"1px solid #FFCDD2",color:"#C62828",borderRadius:7,padding:"6px 12px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor="#D32F2F";e.currentTarget.style.color="#D32F2F";}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor="#FFEBEE";e.currentTarget.style.color="#C62828";}}>
+            Slet
+          </button>
         )}
       </div>
+
+      {/* Tabs */}
+      <div style={{display:"flex",gap:6,marginBottom:16}}>{tBtn("depot","Depot")}{tBtn("komp","Kompetencer")}</div>
+
+      {/* Depot tab */}
+      {tab==="depot"&&(
+        <>
+          {approvedDepot.length===0
+            ?<div style={{color:"#90A4AE",fontStyle:"italic",fontSize:14,marginBottom:12}}>Ingen depot-kompetencer registreret</div>
+            :approvedDepot.map(d=>{const c=(depotData[member.id]||{})[d.id];return(
+              <div key={d.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:8,marginBottom:7,background:"#EEF2F7",border:"1px solid #C8D6E2"}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:600,color:"#2C3E50"}}>{d.name}</div>
+                  <div style={{fontSize:11,color:"#78909C",fontFamily:"'JetBrains Mono',monospace"}}>{d.generic}</div>
+                </div>
+                {c.expiry&&<div style={{fontSize:11,color:"#78909C",fontFamily:"'JetBrains Mono',monospace"}}>{fmtDate(c.expiry)}</div>}
+                <Badge approved={c.approved} expiry={c.expiry}/>
+              </div>
+            );})}
+          {canEdit&&(
+            <button onClick={()=>onEditDepot(member)}
+              style={{marginTop:8,width:"100%",background:"none",border:"1px dashed #1565C0",color:"#1976D2",borderRadius:8,padding:"8px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11,letterSpacing:"0.05em"}}
+              onMouseEnter={e=>{e.currentTarget.style.color="#1565C0";e.currentTarget.style.borderColor="#1565C0";}}
+              onMouseLeave={e=>{e.currentTarget.style.color="#1976D2";e.currentTarget.style.borderColor="#1565C0";}}>
+              Rediger depot kompetencer
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Kompetencer tab */}
+      {tab==="komp"&&(
+        <>
+          {col===undefined
+            ?<div style={{color:"#90A4AE",fontStyle:"italic",fontSize:14}}>Ingen standardprofil for denne faggruppe</div>
+            :<>
+              {canEdit&&<div style={{marginBottom:12,padding:"8px 12px",borderRadius:8,background:"#F0F4F8",border:"1px solid #C8D6E2",fontSize:12,color:"#78909C",fontFamily:"'JetBrains Mono',monospace"}}>Klik en kompetence for at markere den som manglende</div>}
+              {COMP_CATS.map(cat=>{
+                const rel=cat.items.filter(i=>i.lv[col]);
+                if(!rel.length)return null;
+                return(
+                  <div key={cat.cat} style={{marginBottom:14}}>
+                    <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:7,paddingBottom:4,borderBottom:"1px solid #C8D6E2"}}>{cat.cat}</div>
+                    {rel.map(item=>{
+                      const p=profile[item.id]; const flagged=p?.flagged||false; const lv=p?.level||item.lv[col];
+                      return(
+                        <div key={item.id} onClick={()=>toggleFlag(item.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:8,marginBottom:4,background:flagged?"#1A0808":"#EEF2F7",border:`1px solid ${flagged?"#D32F2F30":"#C8D6E2"}`,cursor:canEdit?"pointer":"default",transition:"all 0.15s"}}>
+                          <div style={{width:7,height:7,borderRadius:"50%",flexShrink:0,background:flagged?"#D32F2F":"#00897B"}}/>
+                          <div style={{flex:1,fontSize:14,color:flagged?"#C62828":"#2C3E50"}}>{item.name}</div>
+                          <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",padding:"2px 7px",borderRadius:4,background:flagged?"#D32F2F20":"#F0F4F8",color:flagged?"#D32F2F":lv==="X"?"#00897B":"#F57C00"}}>{flagged?"Mangler":lv==="X"?"Basis":"Oplæring"}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </>
+          }
+        </>
+      )}
     </div>
   );
 }
 
 // ─── Depot Module ─────────────────────────────────────────────────────────────
+function DepotModule({onClose,activeRole}) {
+  const [staff,setStaff]=useState(()=>storage.get("hh_staff",DEFAULT_STAFF));
+  const [depotData,setDepotData]=useState(()=>storage.get("hh_depot_comp",DEFAULT_DEPOT));
+  const [profileData,setProfileData]=useState(()=>storage.get("hh_profiles",{}));
+  const [selected,setSelected]=useState(null);
+  const [activeTab,setActiveTab]=useState("staff");
+  const [query,setQuery]=useState("");
+  const [drugQuery,setDrugQuery]=useState("");
+  const [editDepot,setEditDepot]=useState(null);
+  const [showAdd,setShowAdd]=useState(false);
+  const [confirmDel,setConfirmDel]=useState(null);
 
-function DepotModule({ onClose }) {
-  const [activeTab, setActiveTab] = useState("staff");
-  const [staff, setStaff] = useState(() => storage.get("hh_depot_staff", DEFAULT_STAFF));
-  const [competencies, setCompetencies] = useState(() => storage.get("hh_depot_comp", DEFAULT_COMPETENCIES));
-  const [editTarget, setEditTarget] = useState(null);
+  useEffect(()=>{storage.set("hh_staff",staff);},[staff]);
+  useEffect(()=>{storage.set("hh_depot_comp",depotData);},[depotData]);
+  useEffect(()=>{storage.set("hh_profiles",profileData);},[profileData]);
 
-  useEffect(() => { storage.set("hh_depot_staff", staff); }, [staff]);
-  useEffect(() => { storage.set("hh_depot_comp", competencies); }, [competencies]);
+  const canEdit = activeRole==="Sygeplejerske";
+  const addStaff = m => { setStaff(p=>[...p,m]); setShowAdd(false); setSelected(m.id); };
+  const delStaff = id => { setStaff(p=>p.filter(s=>s.id!==id)); if(selected===id)setSelected(null); setConfirmDel(null); };
+  const saveDepot = (id,comp) => { setDepotData(p=>({...p,[id]:comp})); setEditDepot(null); };
+  const updateProfile = (id,prof) => setProfileData(p=>({...p,[id]:prof}));
 
-  const saveCompetencies = (staffId, newComp) => {
-    setCompetencies(prev => ({ ...prev, [staffId]: newComp }));
-    setEditTarget(null);
+  const filtStaff = staff.filter(s=>s.name.toLowerCase().includes(query.toLowerCase())||s.role.toLowerCase().includes(query.toLowerCase()));
+  const filtDrugs = DEPOT_DRUGS.filter(d=>d.name.toLowerCase().includes(drugQuery.toLowerCase())||d.generic.toLowerCase().includes(drugQuery.toLowerCase()));
+  const selMember = staff.find(s=>s.id===selected);
+
+  const getStats = id => {
+    const comp=depotData[id]||{};
+    const ok=Object.values(comp).filter(c=>c.approved&&!isExp(c.expiry)).length;
+    const bad=Object.values(comp).filter(c=>c.approved&&(isExp(c.expiry)||isSoon(c.expiry))).length;
+    const prof=profileData[id]||getBaseProfile((staff.find(s=>s.id===id)||{}).role);
+    const flagged=Object.values(prof).filter(p=>p.flagged).length;
+    return {ok,bad,flagged};
   };
 
-  const totalOk = staff.reduce((acc, s) => acc + Object.values(competencies[s.id]||{}).filter(c => c.approved && !isExpired(c.expiry)).length, 0);
-  const totalExpired = staff.reduce((acc, s) => acc + Object.values(competencies[s.id]||{}).filter(c => c.approved && isExpired(c.expiry)).length, 0);
-  const totalSoon = staff.reduce((acc, s) => acc + Object.values(competencies[s.id]||{}).filter(c => c.approved && isSoonExpiring(c.expiry)).length, 0);
-
-  const tabBtn = (id, label) => (
-    <button onClick={() => setActiveTab(id)} style={{
-      background: activeTab===id?"#1D3557":"none",
-      border: `1px solid ${activeTab===id?"#2D4A6E":"#1A2030"}`,
-      color: activeTab===id?"#79C0FF":"#6E7681",
-      borderRadius:8, padding:"7px 16px", cursor:"pointer",
-      fontFamily:"'JetBrains Mono',monospace", fontSize:12, letterSpacing:"0.05em",
-    }}>{label}</button>
+  const tabBtn=(id,lbl)=>(
+    <button onClick={()=>{setActiveTab(id);setSelected(null);}} style={{background:activeTab===id?"#FFFFFF":"rgba(255,255,255,0.2)",border:`1px solid ${activeTab===id?"#FFFFFF":"rgba(255,255,255,0.4)"}`,color:activeTab===id?"#1565C0":"#FFFFFF",borderRadius:8,padding:"7px 16px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600}}>
+      {lbl}
+    </button>
   );
 
+  const exportData = () => {
+    const data = { version:1, exported: new Date().toISOString(), staff, depotData, profileData };
+    const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `hertughaven-data-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+  };
+
+  const importData = () => {
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = ".json";
+    inp.onchange = e => {
+      const file = e.target.files[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if(data.staff) setStaff(data.staff);
+          if(data.depotData) setDepotData(data.depotData);
+          if(data.profileData) setProfileData(data.profileData);
+          alert("Data indlaest!");
+        } catch { alert("Fejl: Ugyldig fil."); }
+      };
+      reader.readAsText(file);
+    };
+    inp.click();
+  };
+
   return (
-    <div style={{ position:"fixed", inset:0, background:"#080C10", zIndex:300, display:"flex", flexDirection:"column", fontFamily:"'Crimson Pro',serif" }}>
+    <div style={{position:"fixed",inset:0,background:"#E8EEF4",zIndex:300,display:"flex",flexDirection:"column",fontFamily:"'Crimson Pro',serif"}}>
       {/* Header */}
-      <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px", borderBottom:"1px solid #1A2030", background:"#080C10", flexShrink:0, flexWrap:"wrap" }}>
-        <button onClick={onClose} style={{ background:"#0D1520", border:"1px solid #2D4A6E", color:"#79C0FF", borderRadius:8, padding:"8px 14px", cursor:"pointer", fontSize:14, fontFamily:"'Crimson Pro',serif", fontWeight:600, flexShrink:0 }}
-          onMouseEnter={e=>e.currentTarget.style.background="#1D3557"}
-          onMouseLeave={e=>e.currentTarget.style.background="#0D1520"}>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",borderBottom:"1px solid #0D47A1",background:"#1565C0",flexShrink:0,flexWrap:"wrap"}}>
+        <button onClick={onClose} style={{background:"#FFFFFF",border:"1px solid #FFFFFF",color:"#1565C0",borderRadius:8,padding:"8px 14px",cursor:"pointer",fontSize:14,fontFamily:"'Crimson Pro',serif",fontWeight:600,flexShrink:0}}>
           ← Tilbage
         </button>
-        <div style={{ display:"flex", alignItems:"center", gap:8, flex:1, minWidth:0 }}>
-          <span style={{ fontSize:18 }}>💉</span>
+        <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
+          <span style={{fontSize:18}}>&#128137;</span>
           <div>
-            <div style={{ fontSize:16, fontWeight:600, color:"#E8E6E1" }}>Depot Kompetencer</div>
-            <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#3D5066", textTransform:"uppercase", letterSpacing:"0.08em" }}>Hertughaven</div>
+            <div style={{fontSize:16,fontWeight:600,color:"#FFFFFF"}}>Depot & Kompetencer</div>
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"rgba(255,255,255,0.6)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Hertughaven</div>
           </div>
         </div>
-        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-          <span style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", padding:"4px 10px", borderRadius:20, background:"#2DD4A020", border:"1px solid #2DD4A040", color:"#2DD4A0" }}>{totalOk} ok</span>
-          {totalSoon > 0 && <span style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", padding:"4px 10px", borderRadius:20, background:"#F7884F20", border:"1px solid #F7884F40", color:"#F7884F" }}>⚠ {totalSoon}</span>}
-          {totalExpired > 0 && <span style={{ fontSize:11, fontFamily:"'JetBrains Mono',monospace", padding:"4px 10px", borderRadius:20, background:"#F7545420", border:"1px solid #F7545440", color:"#F75454" }}>✕ {totalExpired}</span>}
-        </div>
-        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-          {tabBtn("staff","Medarbejder")}
-          {tabBtn("drug","Præparat")}
+        <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
+          <button onClick={exportData} style={{background:"rgba(255,255,255,0.2)",border:"1px solid rgba(255,255,255,0.4)",color:"#FFFFFF",borderRadius:8,padding:"7px 12px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:600}}>&#8595; Gem</button>
+          <button onClick={importData} style={{background:"rgba(255,255,255,0.2)",border:"1px solid rgba(255,255,255,0.4)",color:"#FFFFFF",borderRadius:8,padding:"7px 12px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:600}}>&#8593; Hent</button>
+          {tabBtn("staff","Medarbejder")}{tabBtn("drug","Praeparat")}
         </div>
       </div>
 
-      <div style={{ flex:1, minHeight:0 }}>
-        {activeTab==="staff"
-          ? <DepotStaffView staff={staff} competencies={competencies} onEdit={setEditTarget} />
-          : <DepotDrugView staff={staff} competencies={competencies} />
-        }
+      {/* Body */}
+      <div style={{flex:1,minHeight:0,display:"flex"}}>
+
+        {activeTab==="staff"&&(
+          <>
+            {/* Staff list */}
+            <div style={{width:240,flexShrink:0,borderRight:"1px solid #C8D6E2",overflowY:"auto",padding:"12px 10px",display:"flex",flexDirection:"column",gap:7}}>
+              <input type="text" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Søg medarbejder..."
+                style={{width:"100%",background:"#E8EEF4",border:"1px solid #C8D6E2",borderRadius:8,padding:"9px 12px",color:"#1A2332",fontFamily:"'Crimson Pro',serif",fontSize:14,outline:"none"}}/>
+              {canEdit&&(
+                <button onClick={()=>setShowAdd(true)} style={{width:"100%",background:"none",border:"1px dashed #1565C0",color:"#1976D2",borderRadius:8,padding:"8px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11}}
+                  onMouseEnter={e=>{e.currentTarget.style.color="#1565C0";e.currentTarget.style.borderColor="#1565C0";}}
+                  onMouseLeave={e=>{e.currentTarget.style.color="#1976D2";e.currentTarget.style.borderColor="#1565C0";}}>
+                  + Tilføj medarbejder
+                </button>
+              )}
+              {filtStaff.map(s=>{
+                const {ok,bad,flagged}=getStats(s.id); const isSel=selected===s.id;
+                return(
+                  <div key={s.id} onClick={()=>setSelected(isSel?null:s.id)}
+                    style={{padding:"10px 12px",borderRadius:10,background:isSel?"#EEF2F7":"#FFFFFF",border:`1px solid ${isSel?"#1565C0":"#C8D6E2"}`,cursor:"pointer"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:9}}>
+                      <div style={{width:30,height:30,borderRadius:"50%",background:"#E8EEF4",border:`1.5px solid ${isSel?"#1976D2":"#C8D6E2"}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:600,color:"#1976D2",flexShrink:0}}>{inits(s.name)}</div>
+                      <div style={{minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,color:"#2C3E50",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
+                        <div style={{fontSize:10,color:"#78909C",fontFamily:"'JetBrains Mono',monospace",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.role.replace("Social- og Sundheds","S&S-")}</div>
+                      </div>
+                    </div>
+                    <div style={{marginTop:6,display:"flex",gap:6}}>
+                      {ok>0&&<span style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#00897B"}}>💉{ok}</span>}
+                      {bad>0&&<span style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#F57C00"}}>⚠{bad}</span>}
+                      {flagged>0&&<span style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#D32F2F"}}>🚩{flagged}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Detail */}
+            <div style={{flex:1,overflowY:"auto",padding:"20px 22px"}}>
+              {!selMember
+                ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",color:"#90A4AE",fontStyle:"italic",fontSize:15,gap:10}}><div style={{fontSize:32,opacity:0.3}}>👤</div>Vælg en medarbejder</div>
+                :<StaffCard member={selMember} depotData={depotData} profileData={profileData} activeRole={activeRole} onEditDepot={setEditDepot} onUpdateProfile={updateProfile} onDelete={setConfirmDel}/>
+              }
+            </div>
+          </>
+        )}
+
+        {activeTab==="drug"&&(
+          <>
+            <div style={{width:240,flexShrink:0,borderRight:"1px solid #C8D6E2",overflowY:"auto",padding:"12px 10px"}}>
+              <input type="text" value={drugQuery} onChange={e=>setDrugQuery(e.target.value)} placeholder="Søg præparat..."
+                style={{width:"100%",background:"#E8EEF4",border:"1px solid #C8D6E2",borderRadius:8,padding:"9px 12px",color:"#1A2332",fontFamily:"'Crimson Pro',serif",fontSize:14,outline:"none",marginBottom:8}}/>
+              {filtDrugs.map(d=>{
+                const count=staff.filter(s=>{const c=(depotData[s.id]||{})[d.id];return c?.approved&&!isExp(c.expiry);}).length;
+                const isSel=selected===d.id;
+                return(
+                  <div key={d.id} onClick={()=>setSelected(isSel?null:d.id)}
+                    style={{padding:"11px 12px",borderRadius:10,marginBottom:6,background:isSel?"#EEF2F7":"#FFFFFF",border:`1px solid ${isSel?"#1565C0":"#C8D6E2"}`,cursor:"pointer"}}>
+                    <div style={{fontSize:13,fontWeight:600,color:"#2C3E50"}}>{d.name}</div>
+                    <div style={{fontSize:10,color:"#78909C",fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{d.generic}</div>
+                    <div style={{fontSize:11,fontFamily:"'JetBrains Mono',monospace",color:count>0?"#00897B":"#D32F2F",marginTop:6}}>{count} godkendt{count!==1?"e":""}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{flex:1,overflowY:"auto",padding:"20px 22px"}}>
+              {!selected
+                ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",color:"#90A4AE",fontStyle:"italic",fontSize:15,gap:10}}><div style={{fontSize:32,opacity:0.3}}>💊</div>Vælg et præparat</div>
+                :(() => {
+                    const drug=DEPOT_DRUGS.find(d=>d.id===selected); if(!drug)return null;
+                    const qualified=staff.map(s=>{const c=(depotData[s.id]||{})[drug.id];if(!c?.approved)return null;return{s,c,st:cSt(c.approved,c.expiry)};}).filter(Boolean).sort((a,b)=>({ok:0,soon:1,expired:2}[a.st]-{ok:0,soon:1,expired:2}[b.st]));
+                    return(<>
+                      <div style={{marginBottom:20,paddingBottom:16,borderBottom:"1px solid #C8D6E2"}}>
+                        <div style={{fontSize:18,fontWeight:600,color:"#1A2332"}}>{drug.name}</div>
+                        <div style={{fontSize:11,color:"#78909C",fontFamily:"'JetBrains Mono',monospace",marginTop:3}}>{drug.generic}</div>
+                      </div>
+                      <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Godkendte medarbejdere</div>
+                      {qualified.length===0&&<div style={{color:"#90A4AE",fontStyle:"italic",fontSize:14}}>Ingen godkendte medarbejdere</div>}
+                      {qualified.map(({s,c,st})=>(
+                        <div key={s.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:10,marginBottom:7,background:"#FFFFFF",border:"1px solid #C8D6E2"}}>
+                          <div style={{width:34,height:34,borderRadius:"50%",background:"#E8EEF4",border:"1.5px solid #C8D6E2",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:600,color:"#1976D2",flexShrink:0}}>{inits(s.name)}</div>
+                          <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600,color:"#2C3E50"}}>{s.name}</div><div style={{fontSize:11,color:"#78909C",fontFamily:"'JetBrains Mono',monospace"}}>{s.role}</div></div>
+                          {c.expiry&&<div style={{fontSize:11,color:"#78909C",fontFamily:"'JetBrains Mono',monospace"}}>{fmtDate(c.expiry)}</div>}
+                          <Badge approved={c.approved} expiry={c.expiry}/>
+                        </div>
+                      ))}
+                    </>);
+                  })()
+              }
+            </div>
+          </>
+        )}
       </div>
 
-      {editTarget && <DepotEditModal staffMember={editTarget} competencies={competencies} onSave={saveCompetencies} onClose={() => setEditTarget(null)} />}
+      {showAdd&&<AddStaffModal onAdd={addStaff} onClose={()=>setShowAdd(false)}/>}
+      {editDepot&&<DepotEditModal staffMember={editDepot} depotData={depotData} onSave={saveDepot} onClose={()=>setEditDepot(null)}/>}
+      {confirmDel&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(6px)"}}>
+          <div style={{background:"#FFFFFF",border:"1px solid #FFCDD2",borderRadius:14,padding:28,width:"min(360px,92vw)"}}>
+            <div style={{fontSize:17,fontWeight:600,color:"#1A2332",marginBottom:8}}>Slet medarbejder?</div>
+            <div style={{fontSize:14,color:"#607D8B",marginBottom:22,fontStyle:"italic"}}>{(staff.find(s=>s.id===confirmDel)||{}).name} fjernes permanent.</div>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={()=>setConfirmDel(null)} style={{background:"none",border:"1px solid #C8D6E2",color:"#607D8B",borderRadius:8,padding:"9px 18px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15}}>Annuller</button>
+              <button onClick={()=>delStaff(confirmDel)} style={{background:"#FFEBEE",border:"1px solid #E53935",color:"#D32F2F",borderRadius:8,padding:"9px 18px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15,fontWeight:600}}>Slet</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-
-function Dashboard({ onClose }) {
-  const events = storage.get("hh_events", []);
-  const sessions = events.filter(e => e.type==="session_start");
-  const messages = events.filter(e => e.type==="message_sent");
-  const topics = events.filter(e => e.type==="topic");
-
-  const roleCount = {};
-  ROLES.forEach(r => roleCount[r.id] = 0);
-  sessions.forEach(e => { if (e.data.role) roleCount[e.data.role] = (roleCount[e.data.role]||0)+1; });
-
-  const now = new Date();
-  const days = Array.from({length:14},(_,i) => { const d=new Date(now); d.setDate(d.getDate()-(13-i)); return d.toISOString().split("T")[0]; });
-  const msgPerDay = days.map(d => ({ date:d, label:new Date(d).toLocaleDateString("da-DK",{weekday:"short",day:"numeric"}), count:messages.filter(e=>e.date===d).length }));
-
-  const topicCount = {};
-  topics.forEach(e => { if (e.data.topic) topicCount[e.data.topic]=(topicCount[e.data.topic]||0)+1; });
-  const topTopics = Object.entries(topicCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
-
-  const totalSessions = sessions.length;
-  const totalMessages = messages.length;
-  const avgMsg = totalSessions ? (totalMessages/totalSessions).toFixed(1) : 0;
-  const activeDays = days.slice(7).filter(d => messages.some(e=>e.date===d)).length;
-  const maxDay = Math.max(...msgPerDay.map(d=>d.count),1);
-
-  return (
-    <div style={{ position:"fixed", inset:0, background:"#080C10", zIndex:300, overflowY:"auto", fontFamily:"'Crimson Pro',serif" }}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", borderBottom:"1px solid #1A2030", background:"#080C10", position:"sticky", top:0, zIndex:10 }}>
+function Dashboard({onClose}) {
+  const ev=storage.get("hh_events",[]);
+  const sess=ev.filter(e=>e.type==="session_start"),msgs=ev.filter(e=>e.type==="message_sent"),tops=ev.filter(e=>e.type==="topic");
+  const rc={};ROLES.forEach(r=>rc[r.id]=0);sess.forEach(e=>{if(e.data.role)rc[e.data.role]=(rc[e.data.role]||0)+1;});
+  const now=new Date();
+  const days=Array.from({length:14},(_,i)=>{const d=new Date(now);d.setDate(d.getDate()-(13-i));return d.toISOString().split("T")[0];});
+  const mpd=days.map(d=>({date:d,label:new Date(d).toLocaleDateString("da-DK",{weekday:"short",day:"numeric"}),count:msgs.filter(e=>e.date===d).length}));
+  const tc={};tops.forEach(e=>{if(e.data.topic)tc[e.data.topic]=(tc[e.data.topic]||0)+1;});
+  const tt=Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const ts=sess.length,tm=msgs.length,avg=ts?(tm/ts).toFixed(1):0,ad=days.slice(7).filter(d=>msgs.some(e=>e.date===d)).length,mx=Math.max(...mpd.map(d=>d.count),1);
+  return(
+    <div style={{position:"fixed",inset:0,background:"#E8EEF4",zIndex:300,overflowY:"auto",fontFamily:"'Crimson Pro',serif"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 24px",borderBottom:"1px solid #C8D6E2",background:"#E8EEF4",position:"sticky",top:0,zIndex:10}}>
         <div>
-          <div style={{ fontSize:20, fontWeight:600, color:"#E8E6E1" }}>⚕️ Hertughaven · Admin Dashboard</div>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#3D5066", textTransform:"uppercase", letterSpacing:"0.1em", marginTop:2 }}>Sønderborg Kommune · Socialpsykiatri</div>
+          <div style={{fontSize:19,fontWeight:600,color:"#1A2332"}}>⚕️ Admin Dashboard</div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.1em",marginTop:2}}>Hertughaven · Sønderborg Kommune</div>
         </div>
-        <div style={{ display:"flex", gap:10 }}>
-          <button onClick={() => {
-            const blob = new Blob([JSON.stringify({exportDate:new Date().toISOString(),totalSessions,totalMessages,roleCount,topTopics},null,2)],{type:"application/json"});
-            const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`hertughaven-rapport-${new Date().toISOString().split("T")[0]}.json`; a.click();
-          }} style={{ background:"#1D3557", border:"1px solid #2D4A6E", color:"#79C0FF", borderRadius:8, padding:"8px 16px", cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:14 }}>↓ Eksportér</button>
-          <button onClick={onClose} style={{ background:"#0D1520", border:"1px solid #1A2030", color:"#8B949E", borderRadius:8, padding:"8px 16px", cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:14 }}>← Tilbage</button>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>{const b=new Blob([JSON.stringify({exportDate:new Date().toISOString(),ts,tm,rc,tt},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`hh-${new Date().toISOString().split("T")[0]}.json`;a.click();}}
+            style={{background:"#1565C0",border:"1px solid #1565C0",color:"#1565C0",borderRadius:8,padding:"7px 14px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:13}}>↓ Eksportér</button>
+          <button onClick={onClose} style={{background:"#FFFFFF",border:"1px solid #C8D6E2",color:"#546E7A",borderRadius:8,padding:"7px 14px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:13}}>← Tilbage</button>
         </div>
       </div>
-
-      <div style={{ padding:28, maxWidth:1000, margin:"0 auto" }}>
-        {totalSessions===0 ? (
-          <div style={{ textAlign:"center", padding:"60px 20px", color:"#3D5066", fontStyle:"italic" }}>Ingen data endnu. Data indsamles automatisk når medarbejdere bruger appen.</div>
-        ) : (
-          <>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:14, marginBottom:28 }}>
-              {[{label:"Samtaler i alt",value:totalSessions,hint:"siden opstart"},{label:"Beskeder sendt",value:totalMessages,hint:"bruger + AI"},{label:"Pr. samtale",value:avgMsg,hint:"gennemsnit"},{label:"Aktive dage (7 dg)",value:`${activeDays}/7`,hint:"dage med aktivitet"}].map(s => (
-                <div key={s.label} style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:12, padding:"18px 20px" }}>
-                  <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#3D5066", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8 }}>{s.label}</div>
-                  <div style={{ fontSize:32, fontWeight:600, color:"#79C0FF", lineHeight:1 }}>{s.value}</div>
-                  <div style={{ fontSize:13, color:"#4A6080", marginTop:4, fontStyle:"italic" }}>{s.hint}</div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ marginBottom:28 }}>
-              <div style={{ fontSize:16, fontWeight:600, color:"#8B949E", marginBottom:14, paddingBottom:8, borderBottom:"1px solid #1A2030" }}>Aktivitet · Seneste 14 dage</div>
-              <div style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:12, padding:"20px 16px" }}>
-                <div style={{ display:"flex", alignItems:"flex-end", gap:5, height:100 }}>
-                  {msgPerDay.map(d => (
-                    <div key={d.date} style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1, height:"100%", justifyContent:"flex-end" }}>
-                      {d.count>0 && <div style={{ fontSize:10, color:"#79C0FF", marginBottom:3, fontFamily:"'JetBrains Mono',monospace" }}>{d.count}</div>}
-                      <div style={{ width:"100%", borderRadius:"3px 3px 0 0", background:"linear-gradient(180deg,#3B82F6,#1D4ED8)", minHeight:2, height:`${(d.count/maxDay)*90}%` }} />
-                      <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"#3D5066", marginTop:5, writingMode:"vertical-rl", transform:"rotate(180deg)", whiteSpace:"nowrap" }}>{d.label}</div>
-                    </div>
-                  ))}
-                </div>
+      <div style={{padding:24,maxWidth:960,margin:"0 auto"}}>
+        {ts===0?<div style={{textAlign:"center",padding:"60px 20px",color:"#90A4AE",fontStyle:"italic"}}>Ingen data endnu.</div>:<>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:24}}>
+            {[{l:"Samtaler",v:ts,h:"siden opstart"},{l:"Beskeder",v:tm,h:"bruger + AI"},{l:"Pr. samtale",v:avg,h:"gennemsnit"},{l:"Aktive dage (7)",v:`${ad}/7`,h:""}].map(s=>(
+              <div key={s.l} style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:12,padding:"16px 18px"}}>
+                <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:7}}>{s.l}</div>
+                <div style={{fontSize:30,fontWeight:600,color:"#1565C0",lineHeight:1}}>{s.v}</div>
+                {s.h&&<div style={{fontSize:12,color:"#78909C",marginTop:4,fontStyle:"italic"}}>{s.h}</div>}
+              </div>
+            ))}
+          </div>
+          <div style={{marginBottom:24}}>
+            <div style={{fontSize:15,fontWeight:600,color:"#546E7A",marginBottom:12,paddingBottom:7,borderBottom:"1px solid #C8D6E2"}}>Aktivitet · 14 dage</div>
+            <div style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:12,padding:"18px 14px"}}>
+              <div style={{display:"flex",alignItems:"flex-end",gap:4,height:90}}>
+                {mpd.map(d=>(
+                  <div key={d.date} style={{display:"flex",flexDirection:"column",alignItems:"center",flex:1,height:"100%",justifyContent:"flex-end"}}>
+                    {d.count>0&&<div style={{fontSize:9,color:"#1565C0",marginBottom:2,fontFamily:"'JetBrains Mono',monospace"}}>{d.count}</div>}
+                    <div style={{width:"100%",borderRadius:"3px 3px 0 0",background:"linear-gradient(180deg,#42A5F5,#1565C0)",minHeight:2,height:`${(d.count/mx)*88}%`}}/>
+                    <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#90A4AE",marginTop:4,writingMode:"vertical-rl",transform:"rotate(180deg)",whiteSpace:"nowrap"}}>{d.label}</div>
+                  </div>
+                ))}
               </div>
             </div>
-
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:24 }}>
-              <div>
-                <div style={{ fontSize:16, fontWeight:600, color:"#8B949E", marginBottom:14, paddingBottom:8, borderBottom:"1px solid #1A2030" }}>Faggrupper</div>
-                <div style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:12, padding:"14px 18px" }}>
-                  {ROLES.map(r => {
-                    const count = roleCount[r.id]||0;
-                    const max = Math.max(...Object.values(roleCount),1);
-                    return (
-                      <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid #1A2030" }}>
-                        <span style={{ fontSize:14 }}>{r.icon}</span>
-                        <span style={{ fontSize:14, color:"#C9D1D9", width:100 }}>{r.id}</span>
-                        <div style={{ flex:1, height:5, background:"#1A2030", borderRadius:3, overflow:"hidden" }}>
-                          <div style={{ height:"100%", width:`${(count/max)*100}%`, background:"linear-gradient(90deg,#2D6A4F,#58A6FF)", borderRadius:3 }} />
-                        </div>
-                        <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:13, color:"#58A6FF", width:20, textAlign:"right" }}>{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize:16, fontWeight:600, color:"#8B949E", marginBottom:14, paddingBottom:8, borderBottom:"1px solid #1A2030" }}>Mest efterspurgte emner</div>
-                {topTopics.length===0 ? <div style={{ color:"#3D5066", fontStyle:"italic" }}>Emnedata indsamles fra genvejsknapper</div>
-                  : topTopics.map(([topic,count]) => (
-                    <div key={topic} style={{ display:"flex", justifyContent:"space-between", padding:"8px 12px", borderRadius:8, marginBottom:6, background:"#0D1520", border:"1px solid #1A2030" }}>
-                      <span style={{ fontSize:14, color:"#C9D1D9" }}>{topic}</span>
-                      <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:12, background:"#1A2030", color:"#58A6FF", padding:"2px 8px", borderRadius:10 }}>{count}×</span>
-                    </div>
-                  ))
-                }
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18,marginBottom:20}}>
+            <div>
+              <div style={{fontSize:15,fontWeight:600,color:"#546E7A",marginBottom:12,paddingBottom:7,borderBottom:"1px solid #C8D6E2"}}>Faggrupper</div>
+              <div style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:12,padding:"12px 16px"}}>
+                {ROLES.map(r=>{const c=rc[r.id]||0,mx2=Math.max(...Object.values(rc),1);return(
+                  <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #C8D6E2"}}>
+                    <span style={{fontSize:13}}>{r.icon}</span><span style={{fontSize:13,color:"#2C3E50",width:90}}>{r.id}</span>
+                    <div style={{flex:1,height:5,background:"#D6E0EA",borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${(c/mx2)*100}%`,background:"linear-gradient(90deg,#26A69A,#1976D2)",borderRadius:3}}/></div>
+                    <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:"#1976D2",width:18,textAlign:"right"}}>{c}</span>
+                  </div>
+                );})}
               </div>
             </div>
-
-            <div style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:12, padding:"14px 18px", fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:"#3D5066", lineHeight:1.7 }}>
-              <span style={{ color:"#4A6080" }}>ℹ️ GDPR-note:</span> Data gemmes lokalt i browseren. Ingen persondata eller samtaleindhold registreres.
+            <div>
+              <div style={{fontSize:15,fontWeight:600,color:"#546E7A",marginBottom:12,paddingBottom:7,borderBottom:"1px solid #C8D6E2"}}>Populære emner</div>
+              {tt.length===0?<div style={{color:"#90A4AE",fontStyle:"italic",fontSize:14}}>Indsamles fra genvejsknapper</div>
+                :tt.map(([t,c])=>(
+                  <div key={t} style={{display:"flex",justifyContent:"space-between",padding:"7px 11px",borderRadius:8,marginBottom:5,background:"#FFFFFF",border:"1px solid #C8D6E2"}}>
+                    <span style={{fontSize:13,color:"#2C3E50"}}>{t}</span>
+                    <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,background:"#D6E0EA",color:"#1976D2",padding:"2px 7px",borderRadius:10}}>{c}×</span>
+                  </div>
+                ))}
             </div>
-          </>
-        )}
+          </div>
+          <div style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:12,padding:"12px 16px",fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#90A4AE",lineHeight:1.7}}>
+            <span style={{color:"#78909C"}}>ℹ️ GDPR:</span> Data gemmes lokalt i browseren. Ingen persondata eller samtaleindhold registreres.
+          </div>
+        </>}
       </div>
     </div>
   );
 }
 
 // ─── Admin Login ──────────────────────────────────────────────────────────────
-
-function AdminLogin({ onSuccess, onCancel }) {
-  const [pw, setPw] = useState("");
-  const [err, setErr] = useState(false);
-  const attempt = () => { if (pw===ADMIN_PASSWORD) onSuccess(); else { setErr(true); setPw(""); } };
-
-  return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:250, backdropFilter:"blur(6px)" }}>
-      <div style={{ background:"#0D1520", border:"1px solid #1A2030", borderRadius:16, padding:36, width:320 }}>
-        <div style={{ fontSize:26, textAlign:"center", marginBottom:8 }}>🔒</div>
-        <div style={{ fontSize:19, fontWeight:600, color:"#E8E6E1", textAlign:"center", marginBottom:4 }}>Admin adgang</div>
-        <div style={{ fontSize:14, color:"#6E7681", textAlign:"center", marginBottom:22, fontStyle:"italic" }}>Kun for daglig leder</div>
-        <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&attempt()} placeholder="Adgangskode..." autoFocus
-          style={{ width:"100%", background:"#080C10", border:`1px solid ${err?"#F85149":"#1A2030"}`, borderRadius:8, padding:"10px 14px", color:"#E8E6E1", fontFamily:"'Crimson Pro',serif", fontSize:16, outline:"none", marginBottom:err?8:14 }} />
-        {err && <div style={{ color:"#F85149", fontSize:13, marginBottom:10, textAlign:"center" }}>Forkert adgangskode</div>}
-        <div style={{ display:"flex", gap:10 }}>
-          <button onClick={onCancel} style={{ flex:1, background:"none", border:"1px solid #1A2030", color:"#6E7681", borderRadius:8, padding:10, cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:15 }}>Annuller</button>
-          <button onClick={attempt} style={{ flex:1, background:"#1D3557", border:"1px solid #2D4A6E", color:"#79C0FF", borderRadius:8, padding:10, cursor:"pointer", fontFamily:"'Crimson Pro',serif", fontSize:15 }}>Log ind</button>
+function AdminLogin({onSuccess,onCancel}) {
+  const [pw,setPw]=useState(""); const [err,setErr]=useState(false);
+  const try2=()=>{if(pw===ADMIN_PASSWORD)onSuccess();else{setErr(true);setPw("");}};
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,backdropFilter:"blur(6px)"}}>
+      <div style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:16,padding:34,width:310}}>
+        <div style={{fontSize:24,textAlign:"center",marginBottom:8}}>🔒</div>
+        <div style={{fontSize:18,fontWeight:600,color:"#1A2332",textAlign:"center",marginBottom:4}}>Admin adgang</div>
+        <div style={{fontSize:13,color:"#607D8B",textAlign:"center",marginBottom:20,fontStyle:"italic"}}>Kun for daglig leder</div>
+        <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&try2()} placeholder="Adgangskode..." autoFocus
+          style={{width:"100%",background:"#E8EEF4",border:`1px solid ${err?"#D32F2F":"#C8D6E2"}`,borderRadius:8,padding:"9px 13px",color:"#1A2332",fontFamily:"'Crimson Pro',serif",fontSize:15,outline:"none",marginBottom:err?8:13}}/>
+        {err&&<div style={{color:"#D32F2F",fontSize:12,marginBottom:10,textAlign:"center"}}>Forkert adgangskode</div>}
+        <div style={{display:"flex",gap:9}}>
+          <button onClick={onCancel} style={{flex:1,background:"none",border:"1px solid #C8D6E2",color:"#607D8B",borderRadius:8,padding:9,cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:14}}>Annuller</button>
+          <button onClick={try2} style={{flex:1,background:"#1565C0",border:"1px solid #1565C0",color:"#1565C0",borderRadius:8,padding:9,cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:14}}>Log ind</button>
         </div>
       </div>
     </div>
@@ -646,205 +766,157 @@ function AdminLogin({ onSuccess, onCancel }) {
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
-
 function App() {
-  const [role, setRole] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(false);
-  const [showDepot, setShowDepot] = useState(false);
-  const bottomRef = useRef(null);
-  const inputRef = useRef(null);
+  const [role,setRole]=useState(null);
+  const [messages,setMessages]=useState([]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [showRoleModal,setShowRoleModal]=useState(false);
+  const [showAdminLogin,setShowAdminLogin]=useState(false);
+  const [showDashboard,setShowDashboard]=useState(false);
+  const [showDepot,setShowDepot]=useState(false);
+  const bottomRef=useRef(null);
+  const inputRef=useRef(null);
 
-  useEffect(() => {
-    const r = storage.get("hh_role");
-    const m = storage.get("hh_messages");
-    if (r) setRole(r);
-    if (m) setMessages(m);
-  }, []);
+  useEffect(()=>{const r=storage.get("hh_role"),m=storage.get("hh_messages");if(r)setRole(r);if(m)setMessages(m);},[]);
+  useEffect(()=>{if(role){storage.set("hh_role",role);storage.set("hh_messages",messages);}},[role,messages]);
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[messages,loading]);
 
-  useEffect(() => {
-    if (role) { storage.set("hh_role", role); storage.set("hh_messages", messages); }
-  }, [role, messages]);
-
-  useEffect(() => { bottomRef.current?.scrollIntoView({behavior:"smooth"}); }, [messages, loading]);
-
-  const selectRole = (r) => {
-    setRole(r); setShowRoleModal(false);
-    trackEvent("session_start", {role:r});
-    setMessages([{ role:"assistant", content:`Velkommen, ${r}! 👋\n\nJeg er din faglige sparringspartner på **Hertughaven**. Jeg kender jeres arbejdsmetoder, sikkerhedsprocedurer, lovgivning og faglige udfordringer.\n\nDu kan:\n- 💬 **Sparre** om en konkret situation\n- 🧪 **Træne** med quiz og cases\n- 📋 **Få råd** om procedurer og lovgivning\n- 🔒 **Genopfriske** sikkerhedsregler (BVC, LA2, Sikkerhedstavlen)\n\nHvad kan jeg hjælpe dig med i dag?` }]);
+  const selectRole=r=>{
+    setRole(r);setShowRoleModal(false);trackEvent("session_start",{role:r});
+    setMessages([{role:"assistant",content:`Velkommen, ${r}! 👋\n\nJeg er din faglige sparringspartner på **Hertughaven**.\n\nDu kan:\n- 💬 **Sparre** om en konkret situation\n- 🧪 **Træne** med quiz og cases\n- 📋 **Få råd** om procedurer og lovgivning\n- 🔒 **Genopfriske** sikkerhedsregler (BVC, LA2, Sikkerhedstavlen)\n\nHvad kan jeg hjælpe dig med i dag?`}]);
   };
 
-  const sendMessage = async (text) => {
-    const userText = text || input.trim();
-    if (!userText || loading) return;
-    setInput("");
-    trackEvent("message_sent", {role});
-    const newMsgs = [...messages, {role:"user", content:userText}];
-    setMessages(newMsgs);
-    setLoading(true);
-    try {
-      const reply = await callClaude(newMsgs.map(m=>({role:m.role,content:m.content})), role);
-      setMessages([...newMsgs, {role:"assistant", content:reply}]);
-    } catch {
-      setMessages([...newMsgs, {role:"assistant", content:"⚠️ Fejl ved forbindelse. Prøv igen."}]);
-    }
-    setLoading(false);
-    setTimeout(() => inputRef.current?.focus(), 100);
+  const sendMessage=async text=>{
+    const ut=text||input.trim();if(!ut||loading)return;
+    setInput("");trackEvent("message_sent",{role});
+    const nm=[...messages,{role:"user",content:ut}];setMessages(nm);setLoading(true);
+    try{const rep=await callClaude(nm.map(m=>({role:m.role,content:m.content})),role);setMessages([...nm,{role:"assistant",content:rep}]);}
+    catch{setMessages([...nm,{role:"assistant",content:"⚠️ Fejl ved forbindelse. Prøv igen."}]);}
+    setLoading(false);setTimeout(()=>inputRef.current?.focus(),100);
   };
 
-  const handleQuick = (a) => { trackEvent("topic",{topic:a,role}); sendMessage(a); };
-  const clearHistory = () => { setMessages([]); storage.set("hh_messages",[]); if(role) selectRole(role); };
+  const hq=a=>{trackEvent("topic",{topic:a,role});sendMessage(a);};
+  const clear=()=>{setMessages([]);storage.set("hh_messages",[]);if(role)selectRole(role);};
+  const fmt=t=>t.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\*(.+?)\*/g,"<em>$1</em>").replace(/`(.+?)`/g,"<code>$1</code>").replace(/#{1,3} (.+)/g,'<span style="display:block;font-size:18px;font-weight:600;color:#1A2332;margin:8px 0 4px">$1</span>').replace(/\n- /g,"\n• ").replace(/\n/g,"<br/>");
 
-  const fmt = (text) => text
-    .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g,"<em>$1</em>")
-    .replace(/`(.+?)`/g,"<code>$1</code>")
-    .replace(/#{1,3} (.+)/g,'<span style="display:block;font-size:18px;font-weight:600;color:#E8E6E1;margin:8px 0 4px">$1</span>')
-    .replace(/\n- /g,"\n• ")
-    .replace(/\n/g,"<br/>");
-
-  return (
-    <div style={{ minHeight:"100vh", background:"#0D1117", display:"flex", flexDirection:"column", color:"#E8E6E1", fontFamily:"'Crimson Pro',serif" }}>
+  return(
+    <div style={{minHeight:"100vh",background:"#F0F4F8",display:"flex",flexDirection:"column",color:"#1A2332",fontFamily:"'Crimson Pro',serif"}}>
       <style>{`
-        .app-header{background:#0D1117;border-bottom:1px solid #21262D;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-        .logo-badge{width:34px;height:34px;background:linear-gradient(135deg,#2D6A4F,#1D3557);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;}
-        .role-pill{display:flex;align-items:center;gap:7px;background:#161B22;border:1px solid #30363D;border-radius:20px;padding:5px 13px;cursor:pointer;font-family:'Crimson Pro',serif;font-size:14px;color:#C9D1D9;transition:all 0.2s;}
-        .role-pill:hover{border-color:#58A6FF;color:#58A6FF;}
-        .icon-btn{background:none;border:1px solid #30363D;color:#6E7681;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;}
-        .icon-btn:hover{border-color:#58A6FF;color:#58A6FF;}
-        .depot-btn{background:none;border:1px solid #2D4A6E;color:#4A7AAA;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;}
-        .depot-btn:hover{border-color:#79C0FF;color:#79C0FF;background:#0D1520;}
-        .admin-btn{background:none;border:1px solid #1A2030;color:#3D5066;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;}
-        .admin-btn:hover{border-color:#4A6080;color:#6E7681;}
-        .role-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px);}
-        .role-modal{background:#161B22;border:1px solid #30363D;border-radius:16px;padding:36px;max-width:460px;width:90%;animation:fadeUp 0.3s ease;}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-        .role-option{display:flex;align-items:center;gap:14px;background:#0D1117;border:1px solid #30363D;border-radius:10px;padding:13px 16px;cursor:pointer;transition:all 0.2s;width:100%;text-align:left;margin-bottom:8px;}
-        .role-option:hover{border-color:#58A6FF;background:#161B22;transform:translateX(4px);}
-        .msg-row{display:flex;margin-bottom:18px;animation:msgIn 0.25s ease;}
-        @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-        .msg-row.user{justify-content:flex-end;}
-        .msg-bubble{max-width:80%;padding:13px 16px;border-radius:14px;font-family:'Crimson Pro',serif;font-size:16px;line-height:1.65;}
-        .msg-bubble.user{background:#1D3557;border:1px solid #2D4A6E;color:#E8E6E1;border-bottom-right-radius:4px;}
-        .msg-bubble.assistant{background:#161B22;border:1px solid #21262D;color:#C9D1D9;border-bottom-left-radius:4px;}
-        .msg-bubble strong{color:#79C0FF;font-weight:600;}
-        .msg-bubble em{color:#8B949E;}
-        .msg-bubble code{font-family:'JetBrains Mono',monospace;font-size:13px;background:#0D1117;padding:2px 6px;border-radius:4px;color:#79C0FF;}
-        .avatar{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2D6A4F,#1D3557);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:2px;margin-right:9px;}
-        .dot{width:7px;height:7px;border-radius:50%;background:#58A6FF;animation:bounce 1.2s infinite;display:inline-block;margin:0 2px;}
+        .rp{display:flex;align-items:center;gap:7px;background:#FFFFFF;border:1px solid #C8D6E2;border-radius:20px;padding:5px 13px;cursor:pointer;font-family:'Crimson Pro',serif;font-size:14px;color:#2C3E50;transition:all 0.2s;}
+        .rp:hover{border-color:rgba(255,255,255,0.8);color:#FFFFFF;}
+        .ib{background:#FFFFFF;border:1px solid #FFFFFF;color:#1565C0;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;font-weight:600;}
+        .ib:hover{background:#E3F2FD;border-color:#E3F2FD;}
+        .db{background:#FFFFFF;border:1px solid #FFFFFF;color:#1565C0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;font-weight:600;}
+        .db:hover{background:#E3F2FD;border-color:#E3F2FD;}
+        .ab{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#FFFFFF;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;}
+        .ab:hover{background:rgba(255,255,255,0.3);border-color:rgba(255,255,255,0.6);}
+        .ro{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px);}
+        .rm{background:#FFFFFF;border:1px solid #C8D6E2;border-radius:16px;padding:34px;max-width:440px;width:90%;animation:fu 0.3s ease;}
+        @keyframes fu{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .ro-opt{display:flex;align-items:center;gap:14px;background:#F0F4F8;border:1px solid #C8D6E2;border-radius:10px;padding:13px 16px;cursor:pointer;transition:all 0.2s;width:100%;text-align:left;margin-bottom:8px;}
+        .ro-opt:hover{border-color:#1565C0;background:#E3F2FD;transform:translateX(4px);}
+        .mr{display:flex;margin-bottom:18px;animation:fu 0.25s ease;}
+        .mr.user{justify-content:flex-end;}
+        .mb{max-width:80%;padding:13px 16px;border-radius:14px;font-family:'Crimson Pro',serif;font-size:16px;line-height:1.65;}
+        .mb.user{background:#1565C0;border:1px solid #0D47A1;color:#FFFFFF;border-bottom-right-radius:4px;}
+        .mb.assistant{background:#FFFFFF;border:1px solid #D0DAE4;color:#2C3E50;border-bottom-left-radius:4px;}
+        .mb strong{color:#1565C0;font-weight:600;} .mb em{color:#546E7A;} .mb code{font-family:'JetBrains Mono',monospace;font-size:13px;background:#F0F4F8;padding:2px 6px;border-radius:4px;color:#1565C0;}
+        .av{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#1565C0,#0D47A1);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:2px;margin-right:9px;}
+        .dot{width:7px;height:7px;border-radius:50%;background:#1565C0;animation:bo 1.2s infinite;display:inline-block;margin:0 2px;}
         .dot:nth-child(2){animation-delay:0.2s}.dot:nth-child(3){animation-delay:0.4s}
-        @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-6px);opacity:1}}
-        .quick-btn{background:#161B22;border:1px solid #30363D;color:#8B949E;border-radius:20px;padding:6px 13px;font-family:'Crimson Pro',serif;font-size:14px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
-        .quick-btn:hover{border-color:#58A6FF;color:#58A6FF;}
-        .chat-input{flex:1;background:#161B22;border:1px solid #30363D;border-radius:12px;padding:11px 15px;color:#E8E6E1;font-family:'Crimson Pro',serif;font-size:16px;resize:none;min-height:46px;max-height:120px;outline:none;transition:border-color 0.2s;line-height:1.5;}
-        .chat-input:focus{border-color:#58A6FF;}
-        .chat-input::placeholder{color:#6E7681;}
-        .send-btn{background:#1D3557;border:1px solid #2D4A6E;color:#79C0FF;border-radius:10px;padding:11px 16px;cursor:pointer;font-size:18px;transition:all 0.2s;height:46px;display:flex;align-items:center;}
-        .send-btn:hover:not(:disabled){background:#2D4A6E;}
-        .send-btn:disabled{opacity:0.4;cursor:not-allowed;}
+        @keyframes bo{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-6px);opacity:1}}
+        .qb{background:#FFFFFF;border:1px solid #C8D6E2;color:#546E7A;border-radius:20px;padding:6px 13px;font-family:'Crimson Pro',serif;font-size:14px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+        .qb:hover{border-color:#1565C0;color:#1565C0;}
+        .ci{flex:1;background:#FFFFFF;border:1px solid #C8D6E2;border-radius:12px;padding:11px 15px;color:#1A2332;font-family:'Crimson Pro',serif;font-size:16px;resize:none;min-height:46px;max-height:120px;outline:none;transition:border-color 0.2s;line-height:1.5;}
+        .ci:focus{border-color:#1565C0;} .ci::placeholder{color:#607D8B;}
+        .sb{background:#1565C0;border:1px solid #0D47A1;color:#FFFFFF;border-radius:10px;padding:11px 16px;cursor:pointer;font-size:18px;transition:all 0.2s;height:46px;display:flex;align-items:center;}
+        .sb:hover:not(:disabled){background:#0D47A1;} .sb:disabled{opacity:0.4;cursor:not-allowed;}
       `}</style>
 
-      {/* Role modal */}
-      {(!role || showRoleModal) && (
-        <div className="role-overlay">
-          <div className="role-modal">
-            <div style={{ textAlign:"center", fontSize:34, marginBottom:10 }}>⚕️</div>
-            <div style={{ fontFamily:"'Crimson Pro',serif", fontSize:24, fontWeight:600, color:"#E8E6E1", textAlign:"center", marginBottom:6 }}>Hertughaven</div>
-            <div style={{ fontFamily:"'Crimson Pro',serif", fontSize:14, color:"#8B949E", textAlign:"center", marginBottom:24, fontStyle:"italic" }}>Faglig sparringspartner · Sønderborg Kommune</div>
-            {ROLES.map(r => (
-              <button key={r.id} className="role-option" onClick={() => selectRole(r.id)}>
-                <span style={{ fontSize:20 }}>{r.icon}</span>
-                <span style={{ fontFamily:"'Crimson Pro',serif", fontSize:16, fontWeight:600, color:"#E8E6E1" }}>{r.label}</span>
+      {(!role||showRoleModal)&&(
+        <div className="ro">
+          <div className="rm">
+            <div style={{textAlign:"center",fontSize:32,marginBottom:10}}>⚕️</div>
+            <div style={{fontFamily:"'Crimson Pro',serif",fontSize:23,fontWeight:600,color:"#1A2332",textAlign:"center",marginBottom:6}}>Hertughaven</div>
+            <div style={{fontFamily:"'Crimson Pro',serif",fontSize:14,color:"#546E7A",textAlign:"center",marginBottom:22,fontStyle:"italic"}}>Faglig sparringspartner · Sønderborg Kommune</div>
+            {ROLES.map(r=>(
+              <button key={r.id} className="ro-opt" onClick={()=>selectRole(r.id)}>
+                <span style={{fontSize:20}}>{r.icon}</span>
+                <span style={{fontFamily:"'Crimson Pro',serif",fontSize:16,fontWeight:600,color:"#1A2332"}}>{r.label}</span>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {showAdminLogin && <AdminLogin onSuccess={() => { setShowAdminLogin(false); setShowDashboard(true); }} onCancel={() => setShowAdminLogin(false)} />}
-      {showDashboard && <Dashboard onClose={() => setShowDashboard(false)} />}
-      {showDepot && <DepotModule onClose={() => setShowDepot(false)} />}
+      {showAdminLogin&&<AdminLogin onSuccess={()=>{setShowAdminLogin(false);setShowDashboard(true);}} onCancel={()=>setShowAdminLogin(false)}/>}
+      {showDashboard&&<Dashboard onClose={()=>setShowDashboard(false)}/>}
+      {showDepot&&<DepotModule onClose={()=>setShowDepot(false)} activeRole={role}/>}
 
       {/* Header */}
-      <div className="app-header">
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div className="logo-badge">⚕️</div>
+      <div style={{background:"#F0F4F8",borderBottom:"1px solid #D0DAE4",padding:"12px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:34,height:34,background:"linear-gradient(135deg,#1565C0,#0D47A1)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>⚕️</div>
           <div>
-            <div style={{ fontFamily:"'Crimson Pro',serif", fontSize:18, fontWeight:600, color:"#E8E6E1" }}>Hertughaven</div>
-            <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#6E7681", letterSpacing:"0.1em", textTransform:"uppercase" }}>Socialpsykiatri · Sønderborg</div>
+            <div style={{fontFamily:"'Crimson Pro',serif",fontSize:18,fontWeight:600,color:"#1A2332"}}>Hertughaven</div>
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#607D8B",letterSpacing:"0.1em",textTransform:"uppercase"}}>Socialpsykiatri · Sønderborg</div>
           </div>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-          {role && (
-            <button className="role-pill" onClick={() => setShowRoleModal(true)}>
-              <span>{ROLES.find(r=>r.id===role)?.icon}</span>
-              <span>{role}</span>
-            </button>
-          )}
-          <button className="depot-btn" onClick={() => setShowDepot(true)}>💉 Depot</button>
-          <button className="icon-btn" onClick={clearHistory}>↺ Ny</button>
-          <button className="admin-btn" onClick={() => setShowAdminLogin(true)}>⚙ Admin</button>
+        <div style={{display:"flex",alignItems:"center",gap:7}}>
+          {role&&<button className="rp" onClick={()=>setShowRoleModal(true)}><span>{ROLES.find(r=>r.id===role)?.icon}</span><span>{role}</span></button>}
+          <button className="db" onClick={()=>setShowDepot(true)}>💉 Depot</button>
+          <button className="ib" onClick={clear}>↺ Ny</button>
+          <button className="ab" onClick={()=>setShowAdminLogin(true)}>⚙ Admin</button>
         </div>
       </div>
 
       {/* Messages */}
-      <div style={{ flex:1, overflowY:"auto", padding:"22px 18px", maxWidth:800, width:"100%", margin:"0 auto" }}>
-        {messages.length===0 && role && (
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"60px 20px", textAlign:"center" }}>
-            <div style={{ fontSize:44, marginBottom:14 }}>{ROLES.find(r=>r.id===role)?.icon}</div>
-            <div style={{ fontFamily:"'Crimson Pro',serif", fontSize:21, fontWeight:600, color:"#E8E6E1", marginBottom:6 }}>Klar til at hjælpe, {role}</div>
-            <div style={{ fontFamily:"'Crimson Pro',serif", fontSize:14, color:"#6E7681", fontStyle:"italic" }}>Stil et spørgsmål eller vælg en genvej nedenfor</div>
+      <div style={{flex:1,overflowY:"auto",padding:"22px 18px",maxWidth:800,width:"100%",margin:"0 auto"}}>
+        {messages.length===0&&role&&(
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 20px",textAlign:"center"}}>
+            <div style={{fontSize:44,marginBottom:14}}>{ROLES.find(r=>r.id===role)?.icon}</div>
+            <div style={{fontFamily:"'Crimson Pro',serif",fontSize:21,fontWeight:600,color:"#1A2332",marginBottom:6}}>Klar til at hjælpe, {role}</div>
+            <div style={{fontFamily:"'Crimson Pro',serif",fontSize:14,color:"#607D8B",fontStyle:"italic"}}>Stil et spørgsmål eller vælg en genvej nedenfor</div>
           </div>
         )}
-        {messages.map((m,i) => (
-          <div key={i} className={`msg-row ${m.role}`}>
-            {m.role==="assistant" && <div className="avatar">⚕️</div>}
-            <div className={`msg-bubble ${m.role}`} dangerouslySetInnerHTML={{__html:fmt(m.content)}} />
+        {messages.map((m,i)=>(
+          <div key={i} className={`mr ${m.role}`}>
+            {m.role==="assistant"&&<div className="av">⚕️</div>}
+            <div className={`mb ${m.role}`} dangerouslySetInnerHTML={{__html:fmt(m.content)}}/>
           </div>
         ))}
-        {loading && (
-          <div className="msg-row assistant">
-            <div className="avatar">⚕️</div>
-            <div className="msg-bubble assistant" style={{ padding:"14px 18px" }}>
-              <div className="dot"/><div className="dot"/><div className="dot"/>
-            </div>
+        {loading&&(
+          <div className="mr assistant">
+            <div className="av">⚕️</div>
+            <div className="mb assistant" style={{padding:"14px 18px"}}><div className="dot"/><div className="dot"/><div className="dot"/></div>
           </div>
         )}
-        <div ref={bottomRef} />
+        <div ref={bottomRef}/>
       </div>
 
-      {/* Quick actions */}
-      {role && messages.length<=1 && (
-        <div style={{ maxWidth:800, width:"100%", margin:"0 auto", padding:"0 18px 10px", display:"flex", gap:7, flexWrap:"wrap" }}>
-          {(QUICK_ACTIONS[role]||[]).map(a => (
-            <button key={a} className="quick-btn" onClick={() => handleQuick(a)}>{a}</button>
-          ))}
+      {role&&messages.length<=1&&(
+        <div style={{maxWidth:800,width:"100%",margin:"0 auto",padding:"0 18px 10px",display:"flex",gap:7,flexWrap:"wrap"}}>
+          {(QUICK_ACTIONS[role]||[]).map(a=><button key={a} className="qb" onClick={()=>hq(a)}>{a}</button>)}
         </div>
       )}
 
-      {/* Input */}
-      {role && (
-        <div style={{ borderTop:"1px solid #21262D", padding:"14px 18px", maxWidth:800, width:"100%", margin:"0 auto" }}>
-          <div style={{ display:"flex", gap:9, alignItems:"flex-end" }}>
-            <textarea ref={inputRef} className="chat-input" value={input} onChange={e=>setInput(e.target.value)}
+      {role&&(
+        <div style={{borderTop:"1px solid #D0DAE4",padding:"14px 18px",maxWidth:800,width:"100%",margin:"0 auto"}}>
+          <div style={{display:"flex",gap:9,alignItems:"flex-end"}}>
+            <textarea ref={inputRef} className="ci" value={input} onChange={e=>setInput(e.target.value)}
               onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}}}
-              placeholder="Skriv dit spørgsmål eller beskriv en situation..." rows={1} disabled={loading} />
-            <button className="send-btn" onClick={() => sendMessage()} disabled={!input.trim()||loading}>↑</button>
+              placeholder="Skriv dit spørgsmål eller beskriv en situation..." rows={1} disabled={loading}/>
+            <button className="sb" onClick={()=>sendMessage()} disabled={!input.trim()||loading}>↑</button>
           </div>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#3D444D", textAlign:"center", marginTop:7, letterSpacing:"0.05em" }}>
-            ENTER for at sende · SHIFT+ENTER for linjeskift
-          </div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#90A4AE",textAlign:"center",marginTop:7,letterSpacing:"0.05em"}}>ENTER for at sende · SHIFT+ENTER for linjeskift</div>
         </div>
       )}
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
