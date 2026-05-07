@@ -295,8 +295,8 @@ function Badge({approved,expiry}) {
 
 // ─── Add Staff Modal ──────────────────────────────────────────────────────────
 function AddStaffModal({onAdd,onClose}) {
-  const [name,setName]=useState(""); const [role,setRole]=useState(STAFF_ROLES[0]);
-  const save = () => { if(!name.trim())return; onAdd({id:"s"+Date.now(),name:name.trim(),role}); };
+  const [name,setName]=useState(""); const [email,setEmail]=useState(""); const [role,setRole]=useState(STAFF_ROLES[0]);
+  const save = () => { if(!name.trim())return; onAdd({id:"s"+Date.now(),name:name.trim(),email:email.trim(),role}); };
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(6px)"}}>
       <div style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:16,padding:28,width:"min(440px,94vw)"}}>
@@ -305,6 +305,11 @@ function AddStaffModal({onAdd,onClose}) {
           <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Navn</div>
           <input value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&save()} autoFocus placeholder="Fulde navn..."
             style={{width:"100%",background:"#E8EEF4",border:"1px solid #C8D6E2",borderRadius:8,padding:"10px 14px",color:"#1A2332",fontFamily:"'Crimson Pro',serif",fontSize:16,outline:"none"}}/>
+        </div>
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Email</div>
+          <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="medarbejder@soenderborg.dk" type="email"
+            style={{width:"100%",background:"#E8EEF4",border:"1px solid #C8D6E2",borderRadius:8,padding:"10px 14px",color:"#1A2332",fontFamily:"'Crimson Pro',serif",fontSize:15,outline:"none"}}/>
         </div>
         <div style={{marginBottom:22}}>
           <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Faggruppe</div>
@@ -315,7 +320,7 @@ function AddStaffModal({onAdd,onClose}) {
         </div>
         <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
           <button onClick={onClose} style={{background:"none",border:"1px solid #C8D6E2",color:"#607D8B",borderRadius:8,padding:"9px 18px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15}}>Annuller</button>
-          <button onClick={save} disabled={!name.trim()} style={{background:name.trim()?"#1565C0":"#FFFFFF",border:"1px solid #1565C0",color:name.trim()?"#1565C0":"#90A4AE",borderRadius:8,padding:"9px 20px",cursor:name.trim()?"pointer":"default",fontFamily:"'Crimson Pro',serif",fontSize:15,fontWeight:600}}>Tilføj</button>
+          <button onClick={save} disabled={!name.trim()} style={{background:name.trim()?"#1565C0":"#FFFFFF",border:"1px solid #1565C0",color:name.trim()?"#FFFFFF":"#90A4AE",borderRadius:8,padding:"9px 20px",cursor:name.trim()?"pointer":"default",fontFamily:"'Crimson Pro',serif",fontSize:15,fontWeight:600}}>Tilføj</button>
         </div>
       </div>
     </div>
@@ -356,9 +361,51 @@ function DepotEditModal({staffMember,depotData,onSave,onClose}) {
   );
 }
 
+// ─── Edit Staff Modal ─────────────────────────────────────────────────────────
+function EditStaffModal({member, onSave, onClose}) {
+  const [name, setName] = useState(member.name);
+  const [email, setEmail] = useState(member.email||"");
+  const [role, setRole] = useState(member.role);
+
+  const save = () => {
+    if(!name.trim()) return;
+    onSave({...member, name:name.trim(), email:email.trim(), role});
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(6px)"}}>
+      <div style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:16,padding:28,width:"min(440px,94vw)"}}>
+        <div style={{fontSize:18,fontWeight:600,color:"#1A2332",marginBottom:20}}>Rediger medarbejder</div>
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Navn</div>
+          <input value={name} onChange={e=>setName(e.target.value)} autoFocus
+            style={{width:"100%",background:"#E8EEF4",border:"1px solid #C8D6E2",borderRadius:8,padding:"10px 14px",color:"#1A2332",fontFamily:"'Crimson Pro',serif",fontSize:16,outline:"none"}}/>
+        </div>
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Email</div>
+          <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="medarbejder@soenderborg.dk" type="email"
+            style={{width:"100%",background:"#E8EEF4",border:"1px solid #C8D6E2",borderRadius:8,padding:"10px 14px",color:"#1A2332",fontFamily:"'Crimson Pro',serif",fontSize:15,outline:"none"}}/>
+        </div>
+        <div style={{marginBottom:22}}>
+          <div style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:"#90A4AE",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Faggruppe</div>
+          <select value={role} onChange={e=>setRole(e.target.value)}
+            style={{width:"100%",background:"#E8EEF4",border:"1px solid #C8D6E2",borderRadius:8,padding:"10px 14px",color:"#1A2332",fontFamily:"'Crimson Pro',serif",fontSize:15,outline:"none"}}>
+            {STAFF_ROLES.map(r=><option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{background:"none",border:"1px solid #C8D6E2",color:"#607D8B",borderRadius:8,padding:"9px 18px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15}}>Annuller</button>
+          <button onClick={save} disabled={!name.trim()} style={{background:"#1565C0",border:"1px solid #1565C0",color:"#FFFFFF",borderRadius:8,padding:"9px 20px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15,fontWeight:600}}>Gem</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Staff Detail Card ────────────────────────────────────────────────────────
-function StaffCard({member,depotData,profileData,activeRole,onEditDepot,onUpdateProfile,onDelete}) {
+function StaffCard({member,depotData,profileData,activeRole,onEditDepot,onUpdateProfile,onDelete,onEdit}) {
   const [tab,setTab]=useState("depot");
+  const [showEditModal,setShowEditModal]=useState(false);
   const canEdit = activeRole==="Sygeplejerske";
   const profile = profileData[member.id] || getBaseProfile(member.role);
   const col = ROLE_COL[member.role];
@@ -371,7 +418,7 @@ function StaffCard({member,depotData,profileData,activeRole,onEditDepot,onUpdate
   };
 
   const tBtn=(id,lbl)=>(
-    <button onClick={()=>setTab(id)} style={{background:tab===id?"#1565C0":"none",border:`1px solid ${tab===id?"#1565C0":"#C8D6E2"}`,color:tab===id?"#1565C0":"#607D8B",borderRadius:7,padding:"6px 14px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11,letterSpacing:"0.05em"}}>{lbl}</button>
+    <button onClick={()=>setTab(id)} style={{background:tab===id?"#1565C0":"#FFFFFF",border:`1px solid ${tab===id?"#1565C0":"#C8D6E2"}`,color:tab===id?"#FFFFFF":"#607D8B",borderRadius:7,padding:"6px 14px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11,letterSpacing:"0.05em",fontWeight:tab===id?600:400}}>{lbl}</button>
   );
 
   return (
@@ -382,15 +429,25 @@ function StaffCard({member,depotData,profileData,activeRole,onEditDepot,onUpdate
         <div style={{flex:1}}>
           <div style={{fontSize:18,fontWeight:600,color:"#1A2332"}}>{member.name}</div>
           <div style={{fontSize:11,color:"#78909C",fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{member.role}</div>
+          {member.email&&<div style={{fontSize:11,color:"#1976D2",marginTop:2}}>{member.email}</div>}
         </div>
         {canEdit&&(
-          <button onClick={()=>onDelete(member.id)}
-            style={{background:"none",border:"1px solid #FFCDD2",color:"#C62828",borderRadius:7,padding:"6px 12px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor="#D32F2F";e.currentTarget.style.color="#D32F2F";}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor="#FFEBEE";e.currentTarget.style.color="#C62828";}}>
-            Slet
-          </button>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>setShowEditModal(true)}
+              style={{background:"none",border:"1px solid #C8D6E2",color:"#607D8B",borderRadius:7,padding:"6px 12px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor="#1565C0";e.currentTarget.style.color="#1565C0";}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="#C8D6E2";e.currentTarget.style.color="#607D8B";}}>
+              Rediger
+            </button>
+            <button onClick={()=>onDelete(member.id)}
+              style={{background:"none",border:"1px solid #FFCDD2",color:"#C62828",borderRadius:7,padding:"6px 12px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:11}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor="#D32F2F";e.currentTarget.style.color="#D32F2F";}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="#FFEBEE";e.currentTarget.style.color="#C62828";}}>
+              Slet
+            </button>
+          </div>
         )}
+        {showEditModal&&<EditStaffModal member={member} onSave={m=>{onEdit(m);setShowEditModal(false);}} onClose={()=>setShowEditModal(false)}/>}
       </div>
 
       {/* Tabs */}
@@ -419,6 +476,28 @@ function StaffCard({member,depotData,profileData,activeRole,onEditDepot,onUpdate
               Rediger depot kompetencer
             </button>
           )}
+          {(() => {
+            const soonDrugs = approvedDepot.filter(d => {
+              const c = (depotData[member.id]||{})[d.id];
+              return c && (isSoon(c.expiry) || isExp(c.expiry));
+            });
+            if(soonDrugs.length===0) return null;
+            const email = member.email||"";
+            const drugList = soonDrugs.map(d => {
+              const c = (depotData[member.id]||{})[d.id];
+              return `- ${d.name} (${d.generic}), udlober: ${fmtDate(c.expiry)}`;
+            }).join("\n");
+            const subject = encodeURIComponent("Fornyelse af medicinkompetencer");
+            const body = encodeURIComponent(
+              `Kaere kollega.\n\nFolgende af dine medicinkompetencer udlober indenfor 60 dage, og du bedes tage kontakt til en sygeplejerske der kan forny din kompetence.\n\n${drugList}\n\nMed venlig hilsen\nHertughaven`
+            );
+            const mailto = `mailto:${email}?subject=${subject}&body=${body}`;
+            return (
+              <a href={mailto} style={{marginTop:12,display:"block",width:"100%",background:"#F57C00",border:"none",color:"#FFFFFF",borderRadius:8,padding:"12px 14px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15,fontWeight:600,textAlign:"center",textDecoration:"none",boxSizing:"border-box"}}>
+                ✉ Send fornyelsespåmindelse ({soonDrugs.length} kompetence{soonDrugs.length!==1?"r":""} udløber snart/er udløbet)
+              </a>
+            );
+          })()}
         </>
       )}
 
@@ -476,6 +555,7 @@ function DepotModule({onClose,activeRole}) {
   const canEdit = activeRole==="Sygeplejerske";
   const addStaff = m => { setStaff(p=>[...p,m]); setShowAdd(false); setSelected(m.id); };
   const delStaff = id => { setStaff(p=>p.filter(s=>s.id!==id)); if(selected===id)setSelected(null); setConfirmDel(null); };
+  const editStaff = m => setStaff(p=>p.map(s=>s.id===m.id?m:s));
   const saveDepot = (id,comp) => { setDepotData(p=>({...p,[id]:comp})); setEditDepot(null); };
   const updateProfile = (id,prof) => setProfileData(p=>({...p,[id]:prof}));
 
@@ -493,7 +573,7 @@ function DepotModule({onClose,activeRole}) {
   };
 
   const tabBtn=(id,lbl)=>(
-    <button onClick={()=>{setActiveTab(id);setSelected(null);}} style={{background:activeTab===id?"#FFFFFF":"rgba(255,255,255,0.2)",border:`1px solid ${activeTab===id?"#FFFFFF":"rgba(255,255,255,0.4)"}`,color:activeTab===id?"#1565C0":"#FFFFFF",borderRadius:8,padding:"7px 16px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600}}>
+    <button onClick={()=>{setActiveTab(id);setSelected(null);}} style={{background:activeTab===id?"#FFFFFF":"rgba(255,255,255,0.15)",border:`1px solid ${activeTab===id?"#FFFFFF":"rgba(255,255,255,0.5)"}`,color:activeTab===id?"#1565C0":"#FFFFFF",borderRadius:8,padding:"7px 16px",cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600}}>
       {lbl}
     </button>
   );
@@ -590,7 +670,7 @@ function DepotModule({onClose,activeRole}) {
             <div style={{flex:1,overflowY:"auto",padding:"20px 22px"}}>
               {!selMember
                 ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",color:"#90A4AE",fontStyle:"italic",fontSize:15,gap:10}}><div style={{fontSize:32,opacity:0.3}}>👤</div>Vælg en medarbejder</div>
-                :<StaffCard member={selMember} depotData={depotData} profileData={profileData} activeRole={activeRole} onEditDepot={setEditDepot} onUpdateProfile={updateProfile} onDelete={setConfirmDel}/>
+                :<StaffCard member={selMember} depotData={depotData} profileData={profileData} activeRole={activeRole} onEditDepot={setEditDepot} onUpdateProfile={updateProfile} onDelete={setConfirmDel} onEdit={editStaff}/>
               }
             </div>
           </>
@@ -809,7 +889,8 @@ function App() {
         .ib:hover{background:#E3F2FD;border-color:#E3F2FD;}
         .db{background:#FFFFFF;border:1px solid #FFFFFF;color:#1565C0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;font-weight:600;}
         .db:hover{background:#E3F2FD;border-color:#E3F2FD;}
-        .ab{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#FFFFFF;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;}
+        .ab{background:#FFFFFF;border:1px solid #FFFFFF;color:#1565C0;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all 0.2s;font-weight:600;}
+        .ab:hover{background:#E3F2FD;border-color:#E3F2FD;}
         .ab:hover{background:rgba(255,255,255,0.3);border-color:rgba(255,255,255,0.6);}
         .ro{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px);}
         .rm{background:#FFFFFF;border:1px solid #C8D6E2;border-radius:16px;padding:34px;max-width:440px;width:90%;animation:fu 0.3s ease;}
