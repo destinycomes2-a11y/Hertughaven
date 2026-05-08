@@ -940,13 +940,12 @@ function App() {
   const bottomRef=useRef(null);
   const inputRef=useRef(null);
 
-  useEffect(()=>{const r=storage.get("hh_role"),m=storage.get("hh_messages");if(r)setRole(r);if(m)setMessages(m);},[]);
+  useEffect(()=>{const r=storage.get("hh_role");if(r)setRole(r);},[]);
   useEffect(()=>{if(role){storage.set("hh_role",role);storage.set("hh_messages",messages);}},[role,messages]);
   useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[messages,loading]);
 
   const selectRole=r=>{
-    setRole(r);setShowRoleModal(false);setSelectedTopic(null);setTopicSubmode(null);setQuizCount(null);trackEvent("session_start",{role:r});
-    setMessages([{role:"assistant",content:`Velkommen, ${r}! 👋\n\nJeg er din faglige sparringspartner på **Hertughaven**.\n\nDu kan:\n- 💬 **Sparre** om en konkret situation\n- 🧪 **Træne** med quiz og cases\n- 📋 **Få råd** om procedurer og lovgivning\n- 🔒 **Genopfriske** sikkerhedsregler (BVC, LA2, Sikkerhedstavlen)\n\nHvad kan jeg hjælpe dig med i dag?`}]);
+    setRole(r);setShowRoleModal(false);setSelectedTopic(null);setTopicSubmode(null);setQuizCount(null);setMessages([]);storage.set("hh_messages",[]);trackEvent("session_start",{role:r});
   };
 
   const sendMessage=async text=>{
@@ -959,7 +958,7 @@ function App() {
   };
 
   const hq=a=>{trackEvent("topic",{topic:a,role});sendMessage(a);};
-  const clear=()=>{setMessages([]);storage.set("hh_messages",[]);if(role)selectRole(role);};
+  const clear=()=>{setMessages([]);storage.set("hh_messages",[]);setSelectedTopic(null);setTopicSubmode(null);setQuizCount(null);};
   const fmt=t=>t.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\*(.+?)\*/g,"<em>$1</em>").replace(/`(.+?)`/g,"<code>$1</code>").replace(/#{1,3} (.+)/g,'<span style="display:block;font-size:18px;font-weight:600;color:#1A2332;margin:8px 0 4px">$1</span>').replace(/\n- /g,"\n• ").replace(/\n/g,"<br/>");
 
   return(
