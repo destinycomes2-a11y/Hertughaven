@@ -1033,7 +1033,10 @@ function App() {
         </div>
       </div>
 
-      {/* Topic grid overlay */}
+      {/* Content area - flex:1 container */}
+      <div style={{flex:1,minHeight:0,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+
+      {/* Topic grid */}
       {role&&messages.length===0&&!selectedTopic&&(
         <div style={{flex:1,overflowY:"auto",padding:"28px 18px",maxWidth:900,width:"100%",margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:28}}>
@@ -1122,6 +1125,8 @@ function App() {
         <div ref={bottomRef}/>
       </div>
       )}
+
+      </div> {/* end content area */}
 
       {role&&messages.length>0&&(
         <div style={{maxWidth:800,width:"100%",margin:"0 auto",padding:"6px 18px",display:"flex",gap:7,alignItems:"center"}}>
