@@ -331,11 +331,11 @@ const DEFAULT_STAFF = [
 ];
 
 const DEFAULT_DEPOT = {
-  s1: { d1:{approved:true,expiry:"2025-11-01"}, d2:{approved:true,expiry:"2026-03-15"}, d5:{approved:true,expiry:"2025-06-01"} },
-  s2: { d1:{approved:true,expiry:"2026-08-20"}, d4:{approved:true,expiry:"2026-01-10"}, d6:{approved:true,expiry:"2026-09-01"} },
-  s3: { d2:{approved:true,expiry:"2026-12-01"}, d3:{approved:true,expiry:"2026-05-01"}, d7:{approved:true,expiry:"2025-09-30"} },
-  s4: { d5:{approved:true,expiry:"2026-04-01"}, d6:{approved:true,expiry:"2026-04-01"} },
-  s5: { d1:{approved:true,expiry:"2027-01-01"}, d2:{approved:true,expiry:"2027-01-01"}, d8:{approved:true,expiry:"2026-11-01"} },
+  s1: { d1:{approved:true,expiry:"2025-11-01",assigned:"2024-11-01"}, d2:{approved:true,expiry:"2026-03-15",assigned:"2025-03-15"}, d5:{approved:true,expiry:"2025-06-01",assigned:"2024-06-01"} },
+  s2: { d1:{approved:true,expiry:"2026-08-20",assigned:"2025-08-20"}, d4:{approved:true,expiry:"2026-01-10",assigned:"2025-01-10"}, d6:{approved:true,expiry:"2026-09-01",assigned:"2025-09-01"} },
+  s3: { d2:{approved:true,expiry:"2026-12-01",assigned:"2025-12-01"}, d3:{approved:true,expiry:"2026-05-01",assigned:"2025-05-01"}, d7:{approved:true,expiry:"2025-09-30",assigned:"2024-09-30"} },
+  s4: { d5:{approved:true,expiry:"2026-04-01",assigned:"2025-04-01"}, d6:{approved:true,expiry:"2026-04-01",assigned:"2025-04-01"} },
+  s5: { d1:{approved:true,expiry:"2027-01-01",assigned:"2026-01-01"}, d2:{approved:true,expiry:"2027-01-01",assigned:"2026-01-01"}, d8:{approved:true,expiry:"2026-11-01",assigned:"2025-11-01"} },
 };
 
 const storage = {
@@ -410,11 +410,36 @@ function AddStaffModal({onAdd,onClose}) {
 function DepotEditModal({staffMember,depotData,onSave,onClose}) {
   const [draft,setDraft]=useState(()=>{
     const c=depotData[staffMember.id]||{};
-    return DEPOT_DRUGS.reduce((a,d)=>{a[d.id]={approved:c[d.id]?.approved||false,expiry:c[d.id]?.expiry||""};return a},{});
+    return DEPOT_DRUGS.reduce((a,d)=>{
+      const exp = c[d.id]?.expiry||"";
+      // Convert expiry back to assigned date (subtract 1 year) for display
+      let assigned = "";
+      if(exp) {
+        const d2 = new Date(exp);
+        d2.setFullYear(d2.getFullYear()-1);
+        assigned = d2.toISOString().split("T")[0];
+      }
+      a[d.id]={approved:c[d.id]?.approved||false,assigned};
+      return a;
+    },{});
   });
   const toggle=id=>setDraft(p=>({...p,[id]:{...p[id],approved:!p[id].approved}}));
-  const setExp=(id,v)=>setDraft(p=>({...p,[id]:{...p[id],expiry:v}}));
-  const save=()=>{const r={};DEPOT_DRUGS.forEach(d=>{if(draft[d.id].approved)r[d.id]={approved:true,expiry:draft[d.id].expiry||null};});onSave(staffMember.id,r);};
+  const setExp=(id,v)=>setDraft(p=>({...p,[id]:{...p[id],assigned:v}}));
+  const save=()=>{
+    const r={};
+    DEPOT_DRUGS.forEach(d=>{
+      if(draft[d.id].approved){
+        let expiry=null;
+        if(draft[d.id].assigned){
+          const assigned=new Date(draft[d.id].assigned);
+          assigned.setFullYear(assigned.getFullYear()+1);
+          expiry=assigned.toISOString().split("T")[0];
+        }
+        r[d.id]={approved:true,expiry,assigned:draft[d.id].assigned||null};
+      }
+    });
+    onSave(staffMember.id,r);
+  };
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(6px)"}}>
       <div style={{background:"#FFFFFF",border:"1px solid #C8D6E2",borderRadius:16,padding:28,width:"min(540px,94vw)",maxHeight:"85vh",overflowY:"auto"}}>
@@ -427,13 +452,19 @@ function DepotEditModal({staffMember,depotData,onSave,onClose}) {
               <div style={{fontSize:15,color:"#2C3E50",fontWeight:e.approved?600:400}}>{d.name}</div>
               <div style={{fontSize:11,color:"#78909C",fontFamily:"'JetBrains Mono',monospace"}}>{d.generic}</div>
             </div>
-            {e.approved&&<input type="date" value={e.expiry} onChange={ev=>setExp(d.id,ev.target.value)}
-              style={{background:"#E8EEF4",border:"1px solid #1565C0",borderRadius:6,padding:"5px 9px",color:"#1565C0",fontFamily:"'JetBrains Mono',monospace",fontSize:12,outline:"none"}}/>}
+            {e.approved&&(
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
+                <div style={{fontSize:9,fontFamily:"'JetBrains Mono',monospace",color:"#78909C",textTransform:"uppercase",letterSpacing:"0.06em"}}>Tildelt dato</div>
+                <input type="date" value={e.assigned||""} onChange={ev=>setExp(d.id,ev.target.value)}
+                  style={{background:"#E8EEF4",border:"1px solid #1565C0",borderRadius:6,padding:"5px 9px",color:"#1565C0",fontFamily:"'JetBrains Mono',monospace",fontSize:12,outline:"none"}}/>
+                {e.assigned&&<div style={{fontSize:9,fontFamily:"'JetBrains Mono',monospace",color:"#78909C"}}>Udløber: {(()=>{const d2=new Date(e.assigned);d2.setFullYear(d2.getFullYear()+1);return d2.toLocaleDateString("da-DK",{day:"numeric",month:"short",year:"numeric"});})()}</div>}
+              </div>
+            )}
           </div>
         );})}
         <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"flex-end"}}>
           <button onClick={onClose} style={{background:"none",border:"1px solid #C8D6E2",color:"#607D8B",borderRadius:8,padding:"9px 18px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15}}>Annuller</button>
-          <button onClick={save} style={{background:"#1565C0",border:"1px solid #1565C0",color:"#1565C0",borderRadius:8,padding:"9px 20px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15,fontWeight:600}}>Gem</button>
+          <button onClick={save} style={{background:"#1565C0",border:"1px solid #1565C0",color:"#FFFFFF",borderRadius:8,padding:"9px 20px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15,fontWeight:600}}>Gem</button>
         </div>
       </div>
     </div>
