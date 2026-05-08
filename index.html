@@ -83,6 +83,85 @@ const QUICK_ACTIONS = {
 
 const ADMIN_PASSWORD = "hertughaven2024";
 
+// ─── Emner per rolle ──────────────────────────────────────────────────────────
+const TOPICS = {
+  SSA: [
+    { id:"medicin",      icon:"💊", label:"Medicin",           color:"#1565C0" },
+    { id:"anatomi",      icon:"🫀", label:"Anatomi",           color:"#6A1B9A" },
+    { id:"psykiatri",    icon:"🧠", label:"Psykiatri",         color:"#00695C" },
+    { id:"krap",         icon:"🤝", label:"KRAP",              color:"#E65100" },
+    { id:"la2",          icon:"🛡️", label:"LA2 & Sikkerhed",   color:"#B71C1C" },
+    { id:"cura",         icon:"📋", label:"Cura & Dokumentation", color:"#1B5E20" },
+    { id:"borger",       icon:"🌟", label:"Borgeren ved roret", color:"#F9A825" },
+    { id:"quiz",         icon:"🧪", label:"Quiz",              color:"#283593" },
+  ],
+  Sygeplejerske: [
+    { id:"medicin",      icon:"💊", label:"Medicin",           color:"#1565C0" },
+    { id:"anatomi",      icon:"🫀", label:"Anatomi",           color:"#6A1B9A" },
+    { id:"psykiatri",    icon:"🧠", label:"Psykiatri",         color:"#00695C" },
+    { id:"saarpleje",    icon:"🩹", label:"Sårpleje",          color:"#AD1457" },
+    { id:"akut",         icon:"🚨", label:"Akutberedskab",     color:"#B71C1C" },
+    { id:"la2",          icon:"🛡️", label:"LA2 & Sikkerhed",   color:"#B71C1C" },
+    { id:"cura",         icon:"📋", label:"Cura & Dokumentation", color:"#1B5E20" },
+    { id:"borger",       icon:"🌟", label:"Borgeren ved roret", color:"#F9A825" },
+    { id:"quiz",         icon:"🧪", label:"Quiz",              color:"#283593" },
+  ],
+  Pædagog: [
+    { id:"medicin",      icon:"💊", label:"Medicin (basiskompetencer)", color:"#1565C0" },
+    { id:"krap",         icon:"🤝", label:"KRAP",              color:"#E65100" },
+    { id:"psykiatri",    icon:"🧠", label:"Psykiatri",         color:"#00695C" },
+    { id:"relation",     icon:"💬", label:"Relationel koordinering", color:"#00838F" },
+    { id:"la2",          icon:"🛡️", label:"LA2 & Sikkerhed",   color:"#B71C1C" },
+    { id:"borger",       icon:"🌟", label:"Borgeren ved roret", color:"#F9A825" },
+    { id:"cura",         icon:"📋", label:"Cura & Dokumentation", color:"#1B5E20" },
+    { id:"quiz",         icon:"🧪", label:"Quiz",              color:"#283593" },
+  ],
+  Socialfaglig: [
+    { id:"serviceloven", icon:"⚖️", label:"Serviceloven",      color:"#4A148C" },
+    { id:"magtanvendelse",icon:"📜",label:"Magtanvendelse",     color:"#BF360C" },
+    { id:"handleplaner", icon:"📁", label:"Handleplaner",       color:"#1B5E20" },
+    { id:"paragraf",     icon:"§",  label:"Paragraf-status",    color:"#006064" },
+    { id:"la2",          icon:"🛡️", label:"LA2 & Sikkerhed",   color:"#B71C1C" },
+    { id:"borger",       icon:"🌟", label:"Borgeren ved roret", color:"#F9A825" },
+    { id:"cura",         icon:"📋", label:"Cura & Dokumentation", color:"#1B5E20" },
+    { id:"quiz",         icon:"🧪", label:"Quiz",              color:"#283593" },
+  ],
+  Leder: [
+    { id:"personalejura",icon:"👔", label:"Personalejura",      color:"#1A237E" },
+    { id:"normering",    icon:"📊", label:"Normering",          color:"#33691E" },
+    { id:"med",          icon:"🤝", label:"MED-aftalen",        color:"#E65100" },
+    { id:"akutledelse",  icon:"🚨", label:"Akut ledelsesansvar",color:"#B71C1C" },
+    { id:"la2",          icon:"🛡️", label:"LA2 & Sikkerhed",   color:"#B71C1C" },
+    { id:"borger",       icon:"🌟", label:"Borgeren ved roret", color:"#F9A825" },
+    { id:"cura",         icon:"📋", label:"Cura & Dokumentation", color:"#1B5E20" },
+    { id:"quiz",         icon:"🧪", label:"Quiz",              color:"#283593" },
+  ],
+};
+
+// Hvad sender vi til Claude når et emne vælges
+const TOPIC_PROMPTS = {
+  medicin: { SSA:"medicin og medicinadministration på SSA-niveau", Sygeplejerske:"medicin, farmakologi og medicinsk behandling på sygeplejerskeniveau", Pædagog:"medicin på basiskompetenceniveau for pædagoger", default:"medicin" },
+  anatomi: { default:"anatomi og fysiologi relevant for socialpsykiatrien" },
+  psykiatri: { default:"psykiatriske lidelser, symptomer og behandling i socialpsykiatrien" },
+  krap: { default:"KRAP-metoden (Kognitiv, Ressourcefokuseret og Anerkendende Praksis)" },
+  la2: { default:"LA2-principperne og sikkerhedstavlen på Hertughaven" },
+  cura: { default:"dokumentation i Cura og SafetyNet/VMP" },
+  borger: { default:"Borgeren ved roret og Recovery-orienteret praksis" },
+  saarpleje: { default:"sårpleje og sårbehandling" },
+  akut: { default:"akutberedskab, ABCDE-triagering og akutte situationer" },
+  relation: { default:"relationel koordinering og samarbejde" },
+  serviceloven: { default:"Serviceloven og relevante paragraffer i socialpsykiatrien" },
+  magtanvendelse: { default:"magtanvendelsesreglerne §§124-129 i Serviceloven" },
+  handleplaner: { default:"handleplaner og koordinering" },
+  paragraf: { default:"paragraf-status og udredning" },
+  personalejura: { default:"personalejura og arbejdsretlige forhold" },
+  normering: { default:"normeringsregler og vagtplanlægning" },
+  med: { default:"MED-aftalen og medindflydelse" },
+  akutledelse: { default:"akut ledelsesansvar og handlepligt" },
+};
+
+
+
 const STAFF_ROLES = [
   "Sygeplejerske",
   "Social- og Sundhedsassistent",
@@ -855,6 +934,9 @@ function App() {
   const [showAdminLogin,setShowAdminLogin]=useState(false);
   const [showDashboard,setShowDashboard]=useState(false);
   const [showDepot,setShowDepot]=useState(false);
+  const [selectedTopic,setSelectedTopic]=useState(null);
+  const [topicSubmode,setTopicSubmode]=useState(null);
+  const [quizCount,setQuizCount]=useState(null);
   const bottomRef=useRef(null);
   const inputRef=useRef(null);
 
@@ -863,7 +945,7 @@ function App() {
   useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[messages,loading]);
 
   const selectRole=r=>{
-    setRole(r);setShowRoleModal(false);trackEvent("session_start",{role:r});
+    setRole(r);setShowRoleModal(false);setSelectedTopic(null);setTopicSubmode(null);setQuizCount(null);trackEvent("session_start",{role:r});
     setMessages([{role:"assistant",content:`Velkommen, ${r}! 👋\n\nJeg er din faglige sparringspartner på **Hertughaven**.\n\nDu kan:\n- 💬 **Sparre** om en konkret situation\n- 🧪 **Træne** med quiz og cases\n- 📋 **Få råd** om procedurer og lovgivning\n- 🔒 **Genopfriske** sikkerhedsregler (BVC, LA2, Sikkerhedstavlen)\n\nHvad kan jeg hjælpe dig med i dag?`}]);
   };
 
@@ -952,15 +1034,80 @@ function App() {
         </div>
       </div>
 
-      {/* Messages */}
-      <div style={{flex:1,overflowY:"auto",padding:"22px 18px",maxWidth:800,width:"100%",margin:"0 auto"}}>
-        {messages.length===0&&role&&(
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 20px",textAlign:"center"}}>
-            <div style={{fontSize:44,marginBottom:14}}>{ROLES.find(r=>r.id===role)?.icon}</div>
-            <div style={{fontFamily:"'Crimson Pro',serif",fontSize:21,fontWeight:600,color:"#1A2332",marginBottom:6}}>Klar til at hjælpe, {role}</div>
-            <div style={{fontFamily:"'Crimson Pro',serif",fontSize:14,color:"#607D8B",fontStyle:"italic"}}>Stil et spørgsmål eller vælg en genvej nedenfor</div>
+      {/* Topic grid overlay */}
+      {role&&messages.length===0&&!selectedTopic&&(
+        <div style={{flex:1,overflowY:"auto",padding:"28px 18px",maxWidth:900,width:"100%",margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:28}}>
+            <div style={{fontSize:40,marginBottom:10}}>{ROLES.find(r=>r.id===role)?.icon}</div>
+            <div style={{fontFamily:"'Crimson Pro',serif",fontSize:22,fontWeight:600,color:"#1A2332",marginBottom:4}}>Hvad vil du arbejde med?</div>
+            <div style={{fontFamily:"'Crimson Pro',serif",fontSize:14,color:"#607D8B",fontStyle:"italic"}}>Vælg et emne for at komme i gang</div>
           </div>
-        )}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:14}}>
+            {(TOPICS[role]||[]).map(t=>(
+              <button key={t.id} onClick={()=>setSelectedTopic(t)}
+                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow=`0 8px 24px ${t.color}30`;e.currentTarget.style.borderColor=t.color;}}
+                onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.06)";e.currentTarget.style.borderColor=`${t.color}20`;}}
+                style={{background:"#FFFFFF",border:`2px solid ${t.color}20`,borderRadius:14,padding:"22px 16px",cursor:"pointer",textAlign:"center",transition:"all 0.2s",display:"flex",flexDirection:"column",alignItems:"center",gap:10,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+                <div style={{fontSize:36}}>{t.icon}</div>
+                <div style={{fontFamily:"'Crimson Pro',serif",fontSize:15,fontWeight:600,color:"#1A2332",lineHeight:1.3}}>{t.label}</div>
+                <div style={{width:32,height:3,borderRadius:2,background:t.color,opacity:0.7}}/>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Submode selector */}
+      {role&&messages.length===0&&selectedTopic&&!topicSubmode&&(
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"28px 18px"}}>
+          <button onClick={()=>setSelectedTopic(null)} style={{alignSelf:"flex-start",marginBottom:20,background:"none",border:"none",color:"#607D8B",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:15,display:"flex",alignItems:"center",gap:6}}>← Tilbage</button>
+          <div style={{fontSize:48,marginBottom:12}}>{selectedTopic.icon}</div>
+          <div style={{fontFamily:"'Crimson Pro',serif",fontSize:22,fontWeight:600,color:"#1A2332",marginBottom:6}}>{selectedTopic.label}</div>
+          <div style={{fontFamily:"'Crimson Pro',serif",fontSize:14,color:"#607D8B",marginBottom:32,fontStyle:"italic"}}>Vælg hvordan du vil arbejde med emnet</div>
+          {selectedTopic.id==="quiz" ? (
+            <div style={{display:"flex",flexDirection:"column",gap:12,width:"100%",maxWidth:360}}>
+              <div style={{fontFamily:"'Crimson Pro',serif",fontSize:16,color:"#1A2332",marginBottom:4,textAlign:"center"}}>Vælg antal spørgsmål</div>
+              {[5,10,20].map(n=>(
+                <button key={n} onClick={()=>{setQuizCount(n);setTopicSubmode("quiz");const prompt=`Start en quiz om ${(TOPICS[role]||[]).find(t=>t.id!=="quiz")?.label||"faglige emner"} med præcis ${n} spørgsmål. Stil ét spørgsmål ad gangen og følg quiz-protokollen.`;hq(prompt);}}
+                  style={{background:"#FFFFFF",border:`2px solid ${selectedTopic.color}`,borderRadius:12,padding:"16px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:17,fontWeight:600,color:selectedTopic.color,transition:"all 0.2s"}}>
+                  🧪 Quiz med {n} spørgsmål
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:12,width:"100%",maxWidth:360}}>
+              {[
+                {mode:"laer", icon:"📖", label:"Lær", desc:"Struktureret gennemgang af emnet"},
+                {mode:"quiz", icon:"🧪", label:"Quiz", desc:"Test din viden med spørgsmål"},
+                {mode:"spar", icon:"💬", label:"Spar", desc:"Fri dialog og sparring om emnet"},
+              ].map(s=>(
+                <button key={s.mode} onClick={()=>{
+                  setTopicSubmode(s.mode);
+                  const topicStr = (TOPIC_PROMPTS[selectedTopic.id]||{})[role] || (TOPIC_PROMPTS[selectedTopic.id]||{}).default || selectedTopic.label;
+                  let prompt="";
+                  if(s.mode==="laer") prompt=`Lav en struktureret og pædagogisk gennemgang af emnet: ${topicStr}. Start med det vigtigste og byg gradvist videre. Tilpas til min rolle som ${role}.`;
+                  else if(s.mode==="quiz") prompt=`Start en quiz om ${topicStr} med 10 spørgsmål. Stil ét spørgsmål ad gangen og følg quiz-protokollen nøje.`;
+                  else prompt=`Lad os sparre om emnet: ${topicStr}. Jeg er ${role} på Hertughaven. Hvad er de vigtigste ting at have styr på inden for dette område?`;
+                  hq(prompt);
+                }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=selectedTopic.color;e.currentTarget.style.background=`${selectedTopic.color}08`;}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor=`${selectedTopic.color}30`;e.currentTarget.style.background="#FFFFFF";}}
+                  style={{background:"#FFFFFF",border:`2px solid ${selectedTopic.color}30`,borderRadius:12,padding:"16px 20px",cursor:"pointer",textAlign:"left",transition:"all 0.2s",display:"flex",alignItems:"center",gap:14}}>
+                  <span style={{fontSize:28}}>{s.icon}</span>
+                  <div>
+                    <div style={{fontFamily:"'Crimson Pro',serif",fontSize:17,fontWeight:600,color:"#1A2332"}}>{s.label}</div>
+                    <div style={{fontFamily:"'Crimson Pro',serif",fontSize:13,color:"#607D8B",marginTop:2}}>{s.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Messages */}
+      {messages.length>0&&(
+      <div style={{flex:1,overflowY:"auto",padding:"22px 18px",maxWidth:800,width:"100%",margin:"0 auto"}}>
         {messages.map((m,i)=>(
           <div key={i} className={`mr ${m.role}`}>
             {m.role==="assistant"&&<div className="av">⚕️</div>}
@@ -975,10 +1122,12 @@ function App() {
         )}
         <div ref={bottomRef}/>
       </div>
+      )}
 
-      {role&&messages.length<=1&&(
-        <div style={{maxWidth:800,width:"100%",margin:"0 auto",padding:"0 18px 10px",display:"flex",gap:7,flexWrap:"wrap"}}>
-          {(QUICK_ACTIONS[role]||[]).map(a=><button key={a} className="qb" onClick={()=>hq(a)}>{a}</button>)}
+      {role&&messages.length>0&&(
+        <div style={{maxWidth:800,width:"100%",margin:"0 auto",padding:"6px 18px",display:"flex",gap:7,alignItems:"center"}}>
+          <button onClick={()=>{setMessages([]);setSelectedTopic(null);setTopicSubmode(null);setQuizCount(null);storage.set("hh_messages",[]);}} style={{background:"none",border:"1px solid #C8D6E2",color:"#78909C",borderRadius:20,padding:"5px 14px",cursor:"pointer",fontFamily:"'Crimson Pro',serif",fontSize:13}}>← Skift emne</button>
+          {selectedTopic&&<span style={{fontSize:13,color:"#607D8B",fontFamily:"'Crimson Pro',serif",fontStyle:"italic"}}>{selectedTopic.icon} {selectedTopic.label}</span>}
         </div>
       )}
 
